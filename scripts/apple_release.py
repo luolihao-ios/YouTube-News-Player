@@ -35,6 +35,30 @@ def run(command, *, capture=False, sensitive=False):
         raise RuntimeError('命令失败: '+str(command[0])+f' (exit {result.returncode})')
     return result.stdout if capture else None
 
+def prepare_import_container(source, password, destination):
+    """保留原密钥、证书及证书链，仅生成 security import 兼容的临时加密容器。"""
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.serialization import pkcs12
+    source=Path(source); destination=Path(destination)
+    if source.resolve()==destination.resolve() or destination.exists():
+        raise ValueError('拒绝覆盖现有签名材料')
+    try:
+        key,certificate,chain=pkcs12.load_key_and_certificates(source.read_bytes(),password.encode('utf8'))
+        if key is None or certificate is None: raise ValueError('缺少密钥或证书')
+        if key.public_key().public_bytes(serialization.Encoding.DER,serialization.PublicFormat.SubjectPublicKeyInfo)!=certificate.public_key().public_bytes(serialization.Encoding.DER,serialization.PublicFormat.SubjectPublicKeyInfo):
+            raise ValueError('密钥与证书不匹配')
+    except Exception:
+        raise ValueError('现有 P12 未通过完整密钥、证书及密码校验；未更换证书') from None
+    temporary_password=secrets.token_urlsafe(36)
+    encryption=(serialization.PrivateFormat.PKCS12.encryption_builder().kdf_rounds(50000)
+                .key_cert_algorithm(pkcs12.PBES.PBESv1SHA1And3KeyTripleDESCBC)
+                .hmac_hash(hashes.SHA1()).build(temporary_password.encode('ascii')))
+    encrypted=pkcs12.serialize_key_and_certificates(b'YouTubeNewsLive signing',key,certificate,chain,encryption)
+    with destination.open('xb') as output:
+        destination.chmod(0o600)
+        output.write(encrypted)
+    return temporary_password
+
 def export_options(platform,team,profile):
     result={'method':'app-store-connect','signingStyle':'manual','teamID':team,
             'provisioningProfiles':{store.BUNDLE:profile},'uploadSymbols':True,'manageAppVersionAndBuildNumber':False,
@@ -121,7 +145,9 @@ def release(platform):
         run(['security','set-keychain-settings','-lut','21600',keychain])
         run(['security','unlock-keychain','-p',keychain_password,keychain],sensitive=True)
         for path,password in [(cert_path,'IOS_SIGNING_CERTIFICATE_PASSWORD')]+([(installer,'MAC_INSTALLER_P12_PASSWORD')] if platform=='macos' else []):
-            run(['security','import',path,'-k',keychain,'-P',os.environ[password],'-T','/usr/bin/codesign','-T','/usr/bin/productbuild'],sensitive=True)
+            import_path=path.with_name(path.stem+'-import.p12')
+            import_password=prepare_import_container(path,os.environ[password],import_path)
+            run(['security','import',import_path,'-k',keychain,'-P',import_password,'-T','/usr/bin/codesign','-T','/usr/bin/productbuild'],sensitive=True)
         run(['security','set-key-partition-list','-S','apple-tool:,apple:,codesign:','-s','-k',keychain_password,keychain],sensitive=True)
         run(['security','list-keychains','-d','user','-s',keychain,*original_keychains])
         archive=temp/'YouTubeNewsLive.xcarchive'
@@ -161,7 +187,7 @@ def release(platform):
         key_path.unlink(missing_ok=True)
         if installed_profile and installed_profile.exists(): installed_profile.unlink()
         # temp 为 RUNNER_TEMP 下本任务固定子目录，仅清理本任务签名文件。
-        for filename in ['distribution.p12','installer.p12','app.mobileprovision','app.provisionprofile']:
+        for filename in ['distribution.p12','installer.p12','distribution-import.p12','installer-import.p12','app.mobileprovision','app.provisionprofile']:
             (temp/filename).unlink(missing_ok=True)
         (ROOT/'Config/Local.xcconfig').unlink(missing_ok=True)
 

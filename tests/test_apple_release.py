@@ -1,4 +1,5 @@
 import importlib.util
+from datetime import datetime, timedelta, timezone
 import os
 from pathlib import Path
 import plistlib
@@ -7,6 +8,11 @@ import tempfile
 import unittest
 from unittest.mock import patch
 import zipfile
+from cryptography import x509
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives.serialization import pkcs12
+from cryptography.x509.oid import NameOID
 
 ROOT=Path(__file__).resolve().parents[1]
 
@@ -75,5 +81,36 @@ class ReleaseTests(unittest.TestCase):
             with self.assertRaises(RuntimeError) as raised: release.run(command,sensitive=True)
         self.assertIn('set-key-partition-list',str(raised.exception))
         for secret in ('temporary-password','secret-pem','BEGIN PRIVATE KEY'): self.assertNotIn(secret,str(raised.exception))
+
+    def test_import_container_preserves_private_key_certificate_and_chain(self):
+        release=self.load()
+        key=rsa.generate_private_key(public_exponent=65537,key_size=2048)
+        name=x509.Name([x509.NameAttribute(NameOID.COMMON_NAME,'Regression signing identity')])
+        cert=(x509.CertificateBuilder().subject_name(name).issuer_name(name).public_key(key.public_key())
+              .serial_number(x509.random_serial_number()).not_valid_before(datetime.now(timezone.utc)-timedelta(days=1))
+              .not_valid_after(datetime.now(timezone.utc)+timedelta(days=1)).sign(key,hashes.SHA256()))
+        original=pkcs12.serialize_key_and_certificates(b'original',key,cert,[cert],serialization.BestAvailableEncryption(b'old-password'))
+        with tempfile.TemporaryDirectory() as temporary:
+            source=Path(temporary)/'original.p12'; source.write_bytes(original)
+            target=Path(temporary)/'import.p12'
+            password=release.prepare_import_container(source,'old-password',target)
+            after_key,after_cert,chain=pkcs12.load_key_and_certificates(target.read_bytes(),password.encode('ascii'))
+            self.assertEqual(source.read_bytes(),original)
+            self.assertNotEqual(password,'old-password')
+            self.assertEqual(after_key.private_numbers(),key.private_numbers())
+            self.assertEqual(after_cert.public_bytes(serialization.Encoding.DER),cert.public_bytes(serialization.Encoding.DER))
+            self.assertEqual([c.public_bytes(serialization.Encoding.DER) for c in chain],[cert.public_bytes(serialization.Encoding.DER)])
+            # DER OIDs: PBE-SHA1-3DES 和 SHA1 MAC；拒绝退回 macOS 无法导入的 PBES2 容器。
+            self.assertIn(bytes.fromhex('060a2a864886f70d010c0103'),target.read_bytes())
+            self.assertNotIn(bytes.fromhex('06092a864886f70d01050d'),target.read_bytes())
+
+    def test_import_container_rejects_wrong_password_without_writing_output(self):
+        release=self.load()
+        with tempfile.TemporaryDirectory() as temporary:
+            source=Path(temporary)/'source.p12'; source.write_bytes(b'invalid container')
+            target=Path(temporary)/'import.p12'
+            with self.assertRaises(ValueError) as raised: release.prepare_import_container(source,'hidden-password',target)
+            self.assertNotIn('hidden-password',str(raised.exception))
+            self.assertFalse(target.exists())
 
 if __name__=='__main__': unittest.main()

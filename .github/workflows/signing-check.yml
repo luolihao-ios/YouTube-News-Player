@@ -20,12 +20,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - run: python -m pip install 'cryptography==50.0.2'
       - name: 仅在临时钥匙串定位签名材料失败步骤
         run: |
           python - <<'PY'
           import base64,os,pathlib,secrets,subprocess,sys,tempfile
           sys.path.insert(0,'scripts')
-          from apple_release import run
+          from apple_release import run,prepare_import_container
           with tempfile.TemporaryDirectory(prefix='signing-check-',dir=os.environ['RUNNER_TEMP']) as directory:
               folder=pathlib.Path(directory)
               keychain=folder/'check.keychain-db'
@@ -39,7 +40,10 @@ jobs:
                       path=folder/(blob+'.p12')
                       path.write_bytes(base64.b64decode(os.environ[blob],validate=True))
                       path.chmod(0o600)
-                      run(['security','import',path,'-k',keychain,'-P',os.environ[pw],'-T','/usr/bin/codesign','-T','/usr/bin/productbuild'],sensitive=True)
+                      import_path=folder/(blob+'-import.p12')
+                      import_password=prepare_import_container(path,os.environ[pw],import_path)
+                      print('原密码、密钥及证书已校验；临时容器兼容格式已生成。',flush=True)
+                      run(['security','import',import_path,'-k',keychain,'-P',import_password,'-T','/usr/bin/codesign','-T','/usr/bin/productbuild'],sensitive=True)
                       print('导入成功：'+label,flush=True)
                   run(['security','set-key-partition-list','-S','apple-tool:,apple:,codesign:','-s','-k',password,keychain],sensitive=True)
                   print('两项证书导入和钥匙串授权均成功；未归档、上传或修改 Apple 资源。',flush=True)
