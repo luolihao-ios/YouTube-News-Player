@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import plistlib
+import re
 import secrets
 import shutil
 import subprocess
@@ -20,7 +21,17 @@ store=importlib.util.module_from_spec(spec); spec.loader.exec_module(store)
 def run(command, *, capture=False, sensitive=False):
     result=subprocess.run([str(value) for value in command],capture_output=capture or sensitive)
     if result.returncode:
-        if sensitive: raise RuntimeError('签名材料处理失败: '+str(command[0])+'；未输出凭据')
+        if sensitive:
+            # 只保留失败步骤、退出码和脱敏 stderr；不输出命令参数或 stdout。
+            detail=(result.stderr or b'').decode('utf8',errors='replace')
+            hidden=[value for name,value in os.environ.items() if value and any(mark in name.upper() for mark in ('KEY','PASSWORD','SECRET','TOKEN'))]
+            hidden += [str(command[index+1]) for index,value in enumerate(command[:-1]) if str(value) in {'-p','-P','-k'}]
+            for value in sorted(hidden,key=len,reverse=True): detail=detail.replace(value,'[已隐去]')
+            detail=re.sub(r'-----BEGIN [^-]+-----.*?-----END [^-]+-----','[已隐去证书材料]',detail,flags=re.S)
+            detail=re.sub(r'[A-Za-z0-9+/=_-]{80,}','[已隐去长编码]',detail)
+            step=Path(str(command[0])).name
+            if step=='security' and len(command)>1: step+=' '+str(command[1])
+            raise RuntimeError(f'签名材料处理失败: {step} (exit {result.returncode})；{detail[-1500:].strip() or "没有错误详情"}')
         raise RuntimeError('命令失败: '+str(command[0])+f' (exit {result.returncode})')
     return result.stdout if capture else None
 

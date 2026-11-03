@@ -2,6 +2,7 @@ import importlib.util
 import os
 from pathlib import Path
 import plistlib
+import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -51,5 +52,28 @@ class ReleaseTests(unittest.TestCase):
         with patch.dict(os.environ,{'IOS_SIGNING_CERTIFICATE_BASE64':'x','IOS_SIGNING_CERTIFICATE_PASSWORD':'x'},clear=True),patch.object(release,'run') as run:
             with self.assertRaisesRegex(ValueError,'MAC_INSTALLER_P12_BASE64'): release.release('macos')
             run.assert_not_called()
+
+    def test_sensitive_failure_keeps_step_and_error_but_redacts_credentials(self):
+        release=self.load()
+        command=['security','import','signing.p12','-P','local-password']
+        error=b'SecKeychainItemImport: MAC verification failed; local-password env-secret'
+        completed=subprocess.CompletedProcess(command,51,stdout=b'PRIVATE-STDOUT',stderr=error)
+        with patch.dict(os.environ,{'TEST_API_KEY':'env-secret'}),patch.object(release.subprocess,'run',return_value=completed):
+            with self.assertRaises(RuntimeError) as raised: release.run(command,sensitive=True)
+        message=str(raised.exception)
+        self.assertIn('security import',message)
+        self.assertIn('51',message)
+        self.assertIn('MAC verification failed',message)
+        for secret in ('local-password','env-secret','PRIVATE-STDOUT'): self.assertNotIn(secret,message)
+
+    def test_sensitive_failure_removes_private_pem_and_keychain_password(self):
+        release=self.load()
+        command=['security','set-key-partition-list','-k','temporary-password','keychain']
+        error=b'failure temporary-password\n-----BEGIN PRIVATE KEY-----\nsecret-pem\n-----END PRIVATE KEY-----'
+        completed=subprocess.CompletedProcess(command,1,stdout=b'',stderr=error)
+        with patch.object(release.subprocess,'run',return_value=completed):
+            with self.assertRaises(RuntimeError) as raised: release.run(command,sensitive=True)
+        self.assertIn('set-key-partition-list',str(raised.exception))
+        for secret in ('temporary-password','secret-pem','BEGIN PRIVATE KEY'): self.assertNotIn(secret,str(raised.exception))
 
 if __name__=='__main__': unittest.main()

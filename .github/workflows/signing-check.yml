@@ -1,0 +1,48 @@
+name: YouTubeNewsLive 签名材料诊断
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: macos-26
+    timeout-minutes: 10
+    env:
+      IOS_SIGNING_CERTIFICATE_BASE64: ${{ secrets.IOS_SIGNING_CERTIFICATE_BASE64 }}
+      IOS_SIGNING_CERTIFICATE_PASSWORD: ${{ secrets.IOS_SIGNING_CERTIFICATE_PASSWORD }}
+      MAC_INSTALLER_P12_BASE64: ${{ secrets.MAC_INSTALLER_P12_BASE64 }}
+      MAC_INSTALLER_P12_PASSWORD: ${{ secrets.MAC_INSTALLER_P12_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: 仅在临时钥匙串定位签名材料失败步骤
+        run: |
+          python - <<'PY'
+          import base64,os,pathlib,secrets,subprocess,sys,tempfile
+          sys.path.insert(0,'scripts')
+          from apple_release import run
+          with tempfile.TemporaryDirectory(prefix='signing-check-',dir=os.environ['RUNNER_TEMP']) as directory:
+              folder=pathlib.Path(directory)
+              keychain=folder/'check.keychain-db'
+              password=secrets.token_hex(24)
+              try:
+                  run(['security','create-keychain','-p',password,keychain],sensitive=True)
+                  run(['security','set-keychain-settings','-lut','21600',keychain])
+                  run(['security','unlock-keychain','-p',password,keychain],sensitive=True)
+                  for label,blob,pw in [('发行证书','IOS_SIGNING_CERTIFICATE_BASE64','IOS_SIGNING_CERTIFICATE_PASSWORD'),('Mac安装器','MAC_INSTALLER_P12_BASE64','MAC_INSTALLER_P12_PASSWORD')]:
+                      print('开始检查：'+label,flush=True)
+                      path=folder/(blob+'.p12')
+                      path.write_bytes(base64.b64decode(os.environ[blob],validate=True))
+                      path.chmod(0o600)
+                      run(['security','import',path,'-k',keychain,'-P',os.environ[pw],'-T','/usr/bin/codesign','-T','/usr/bin/productbuild'],sensitive=True)
+                      print('导入成功：'+label,flush=True)
+                  run(['security','set-key-partition-list','-S','apple-tool:,apple:,codesign:','-s','-k',password,keychain],sensitive=True)
+                  print('两项证书导入和钥匙串授权均成功；未归档、上传或修改 Apple 资源。',flush=True)
+              finally:
+                  subprocess.run(['security','delete-keychain',str(keychain)],capture_output=True)
+          PY
