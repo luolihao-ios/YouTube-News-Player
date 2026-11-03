@@ -1,7 +1,7 @@
 import Foundation
 
 enum AppConfiguration {
-    static let bundleID = Bundle.main.bundleIdentifier ?? "app.newslive.ios"
+    static let bundleID = Bundle.main.bundleIdentifier ?? "com.luolihao.newslive"
     static var apiKey: String {
         #if DEBUG
         let override = UserDefaults.standard.string(forKey: "debugAPIKey") ?? ""

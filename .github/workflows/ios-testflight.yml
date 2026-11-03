@@ -1,19 +1,24 @@
-name: NewsLive 签名与 App Store Connect 上传
+name: YouTubeNewsLive 三平台签名与商店资料
 
 on:
   workflow_dispatch:
     inputs:
       operation:
-        description: 准备应用身份或签名上传 TestFlight
+        description: inspect/prepare 只读；metadata 填写资料；release 签名上传
         type: choice
-        default: release
-        options: [prepare, release]
+        default: inspect
+        options: [inspect, prepare, metadata, release]
+      platform:
+        description: 仅处理选定平台；all 不包含 tvOS
+        type: choice
+        default: all
+        options: [all, ios, macos, visionos]
 
 permissions:
   contents: read
 
 concurrency:
-  group: newslive-app-store
+  group: youtubenewslive-app-store
   cancel-in-progress: false
 
 jobs:
@@ -29,30 +34,45 @@ jobs:
       record_ready: ${{ steps.apple.outputs.record_ready }}
       app_id: ${{ steps.apple.outputs.app_id }}
       build_number: ${{ steps.apple.outputs.build_number }}
+      platforms: ${{ steps.platforms.outputs.platforms }}
+    env:
+      APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
       - run: python -m pip install 'PyJWT[crypto]==2.10.1'
-      - name: 注册 Bundle ID 并检查 NewsLive 应用记录
+      - name: 验证选定平台
+        id: platforms
+        env:
+          SELECTED_PLATFORM: ${{ inputs.platform }}
+        run: |
+          python - <<'PY'
+          import json,os,sys
+          sys.path.insert(0,'scripts')
+          import appstore
+          appstore.output('platforms',json.dumps(appstore.selected_platforms([os.environ['SELECTED_PLATFORM']])))
+          PY
+      - name: 只读应用、全部平台草稿、语言与二进制
         id: apple
+        run: python scripts/appstore.py inspect
+      - name: 确认写入或发布具有实际应用记录
+        if: steps.apple.outputs.record_ready != 'true' && (inputs.operation == 'metadata' || inputs.operation == 'release')
+        run: |
+          echo '没有本 Bundle 的 App Store Connect 记录，停止资料写入或上传。'
+          exit 1
+      - name: 填写并回读所选平台三语言商店资料
+        if: steps.apple.outputs.record_ready == 'true' && (inputs.operation == 'metadata' || inputs.operation == 'release')
         env:
-          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-          APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
-        run: python scripts/appstore.py prepare
-      - name: 填写并回读名称与副标题
-        if: steps.apple.outputs.record_ready == 'true'
-        env:
-          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-          APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
-        run: python scripts/appstore.py metadata
+          SELECTED_PLATFORM: ${{ inputs.platform }}
+        run: python scripts/appstore.py metadata --platform "$SELECTED_PLATFORM"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: NewsLive-Apple-准备报告
+          name: YouTubeNewsLive-Apple-商店报告
           path: build/apple-report
           if-no-files-found: ignore
           retention-days: 7
@@ -60,139 +80,43 @@ jobs:
   archive-upload:
     needs: [verify, prepare]
     if: inputs.operation == 'release' && needs.prepare.outputs.record_ready == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: ${{ fromJSON(needs.prepare.outputs.platforms) }}
     runs-on: macos-26
-    timeout-minutes: 35
+    timeout-minutes: 45
     env:
       BUNDLE_ID: com.luolihao.newslive
       APP_STORE_ID: ${{ needs.prepare.outputs.app_id }}
       BUILD_NUMBER: ${{ needs.prepare.outputs.build_number }}
       RELEASE_STAGE: testflight
+      IOS_SIGNING_CERTIFICATE_BASE64: ${{ secrets.IOS_SIGNING_CERTIFICATE_BASE64 }}
+      IOS_SIGNING_CERTIFICATE_PASSWORD: ${{ secrets.IOS_SIGNING_CERTIFICATE_PASSWORD }}
+      MAC_INSTALLER_P12_BASE64: ${{ secrets.MAC_INSTALLER_P12_BASE64 }}
+      MAC_INSTALLER_P12_PASSWORD: ${{ secrets.MAC_INSTALLER_P12_PASSWORD }}
+      YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+      PRIVACY_POLICY_URL: ${{ vars.PRIVACY_POLICY_URL }}
+      SUPPORT_URL: ${{ vars.SUPPORT_URL }}
+      APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
       - run: python -m pip install 'PyJWT[crypto]==2.10.1'
-      - name: 验证签名与 API 凭据
+      - name: 检查证书、签名、验证 IPA 或 PKG 并上传
         env:
-          IOS_SIGNING_CERTIFICATE_BASE64: ${{ secrets.IOS_SIGNING_CERTIFICATE_BASE64 }}
-          IOS_SIGNING_CERTIFICATE_PASSWORD: ${{ secrets.IOS_SIGNING_CERTIFICATE_PASSWORD }}
-          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
-          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-          APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
-        run: |
-          python3 - <<'PY'
-          import os
-          names=['IOS_SIGNING_CERTIFICATE_BASE64','IOS_SIGNING_CERTIFICATE_PASSWORD','YOUTUBE_API_KEY','APP_STORE_CONNECT_API_KEY_ID','APP_STORE_CONNECT_ISSUER_ID','APP_STORE_CONNECT_API_KEY_BASE64']
-          missing=[name for name in names if not os.environ.get(name)]
-          if missing: raise SystemExit('缺少仓库 Secret: '+', '.join(missing))
-          print('所需仓库凭据均已提供，未输出凭据内容。')
-          PY
-      - name: 生成签名配置和 NewsLive 专用描述文件
-        env:
-          IOS_SIGNING_CERTIFICATE_BASE64: ${{ secrets.IOS_SIGNING_CERTIFICATE_BASE64 }}
-          IOS_SIGNING_CERTIFICATE_PASSWORD: ${{ secrets.IOS_SIGNING_CERTIFICATE_PASSWORD }}
-          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
-          PRIVACY_POLICY_URL: ${{ vars.PRIVACY_POLICY_URL }}
-          SUPPORT_URL: ${{ vars.SUPPORT_URL }}
-          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-          APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
-        run: |
-          set -euo pipefail
-          python3 scripts/configure_ci.py
-          export SIGNING_CERTIFICATE_PATH="$RUNNER_TEMP/newslive-distribution.p12"
-          python3 - <<'PY'
-          import os,base64,pathlib
-          pathlib.Path(os.environ['SIGNING_CERTIFICATE_PATH']).write_bytes(base64.b64decode(os.environ['IOS_SIGNING_CERTIFICATE_BASE64']))
-          PY
-          python3 scripts/appstore.py provision --profile-output "$RUNNER_TEMP/newslive.mobileprovision"
-          security cms -D -i "$RUNNER_TEMP/newslive.mobileprovision" > "$RUNNER_TEMP/newslive-profile.plist"
-          python3 - <<'PY'
-          import os,plistlib,pathlib,shutil
-          profile=plistlib.loads((pathlib.Path(os.environ['RUNNER_TEMP'])/'newslive-profile.plist').read_bytes())
-          team=profile['TeamIdentifier'][0]
-          assert profile['Entitlements']['application-identifier']==team+'.'+os.environ['BUNDLE_ID'], '描述文件不属于 NewsLive'
-          target=pathlib.Path.home()/'Library/MobileDevice/Provisioning Profiles'
-          target.mkdir(parents=True,exist_ok=True)
-          shutil.copyfile(pathlib.Path(os.environ['RUNNER_TEMP'])/'newslive.mobileprovision',target/(profile['UUID']+'.mobileprovision'))
-          with open(os.environ['GITHUB_ENV'],'a') as f:
-              f.write('TEAM_ID='+team+'\nPROFILE_NAME='+profile['Name']+'\nPROFILE_UUID='+profile['UUID']+'\n')
-          PY
-          keychain="$RUNNER_TEMP/newslive.keychain-db"
-          keychain_password=$(openssl rand -hex 24)
-          security create-keychain -p "$keychain_password" "$keychain"
-          security set-keychain-settings -lut 21600 "$keychain"
-          security unlock-keychain -p "$keychain_password" "$keychain"
-          security import "$SIGNING_CERTIFICATE_PATH" -k "$keychain" -P "$IOS_SIGNING_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$keychain_password" "$keychain"
-          security list-keychains -d user -s "$keychain" login.keychain-db
-      - name: Archive 和导出签名 IPA
-        run: |
-          set -euo pipefail
-          xcodebuild archive -project NewsLive.xcodeproj -scheme NewsLive -configuration Release \
-            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/NewsLive.xcarchive" \
-            DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY='Apple Distribution' \
-            PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME" CURRENT_PROJECT_VERSION="$BUILD_NUMBER"
-          python3 - <<'PY'
-          import os,plistlib,pathlib
-          data={'method':'app-store-connect','signingStyle':'manual','teamID':os.environ['TEAM_ID'],
-                'provisioningProfiles':{os.environ['BUNDLE_ID']:os.environ['PROFILE_NAME']},'uploadSymbols':True}
-          (pathlib.Path(os.environ['RUNNER_TEMP'])/'NewsLive-ExportOptions.plist').write_bytes(plistlib.dumps(data))
-          PY
-          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/NewsLive.xcarchive" \
-            -exportPath build/export -exportOptionsPlist "$RUNNER_TEMP/NewsLive-ExportOptions.plist"
-          python3 - <<'PY'
-          import os,pathlib,zipfile,plistlib
-          paths=list(pathlib.Path('build/export').glob('*.ipa'))
-          assert len(paths)==1,'没有唯一 IPA，停止上传'
-          target=pathlib.Path('build/export/NewsLive.ipa')
-          if paths[0]!=target: paths[0].rename(target)
-          with zipfile.ZipFile(target) as ipa:
-              files=[name for name in ipa.namelist() if name.startswith('Payload/') and name.endswith('.app/Info.plist') and name.count('/')==2]
-              assert len(files)==1
-              info=plistlib.loads(ipa.read(files[0]))
-          assert info['CFBundleIdentifier']==os.environ['BUNDLE_ID']
-          assert info['CFBundleVersion']==os.environ['BUILD_NUMBER']
-          assert info['CFBundleDisplayName']=='NewsLive'
-          assert info.get('YouTubeAPIKey') and '$(' not in info['YouTubeAPIKey'], '成品缺少 YouTube 配置'
-          assert info['AppStoreID']==os.environ['APP_STORE_ID']
-          assert info.get('ITSAppUsesNonExemptEncryption') is False
-          print('成品 IPA 身份、版本与运行配置检查通过。')
-          PY
-      - name: 验证并上传 App Store Connect
-        env:
-          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-          APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          import os,base64,pathlib
-          folder=pathlib.Path.home()/'.appstoreconnect/private_keys'
-          folder.mkdir(parents=True,exist_ok=True)
-          key=folder/('AuthKey_'+os.environ['APP_STORE_CONNECT_API_KEY_ID']+'.p8')
-          key.write_bytes(base64.b64decode(os.environ['APP_STORE_CONNECT_API_KEY_BASE64']))
-          key.chmod(0o600)
-          PY
-          xcrun altool --validate-app --type ios -f build/export/NewsLive.ipa --apiKey "$APP_STORE_CONNECT_API_KEY_ID" --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID"
-          xcrun altool --upload-app --type ios -f build/export/NewsLive.ipa --apiKey "$APP_STORE_CONNECT_API_KEY_ID" --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID"
-          echo '已执行 Apple 上传命令；处理状态请在 App Store Connect 回读确认。' >> "$GITHUB_STEP_SUMMARY"
+          SELECTED_PLATFORM: ${{ matrix.platform }}
+        run: python scripts/apple_release.py --platform "$SELECTED_PLATFORM"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: NewsLive-签名IPA
-          path: build/export/NewsLive.ipa
+          name: YouTubeNewsLive-${{ matrix.platform }}-签名成品与上传报告
+          path: |
+            build/export/${{ matrix.platform }}
+            build/apple-report
           if-no-files-found: ignore
           retention-days: 7
-      - name: 清理临时签名材料
-        if: always()
-        env:
-          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-        run: |
-          security delete-keychain "$RUNNER_TEMP/newslive.keychain-db" 2>/dev/null || true
-          rm -f "$RUNNER_TEMP/newslive-distribution.p12" "$RUNNER_TEMP/newslive.mobileprovision" "$RUNNER_TEMP/newslive-profile.plist"
-          rm -f "$HOME/Library/MobileDevice/Provisioning Profiles/${PROFILE_UUID:-}.mobileprovision"
-          rm -f "$HOME/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8"
-          rm -f Config/Local.xcconfig

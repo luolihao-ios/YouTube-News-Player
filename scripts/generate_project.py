@@ -3,6 +3,11 @@ from pathlib import Path
 import hashlib
 import json
 import plistlib
+import copy
+import contextlib
+import io
+import sys
+import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 PROJECT = ROOT / "NewsLive.xcodeproj"
@@ -13,7 +18,7 @@ def ident(name):
 def quote(value):
     return json.dumps(str(value), ensure_ascii=False)
 
-def generate():
+def generate_base():
     objects = []
     def add(name, value):
         key = ident(name)
@@ -74,5 +79,109 @@ def generate():
     workspace.mkdir(exist_ok=True)
     (workspace / "contents.xcworkspacedata").write_text('<?xml version="1.0" encoding="UTF-8"?><Workspace version="1.0"><FileRef location="self:"/></Workspace>', encoding="utf-8")
     print("已產生 NewsLive.xcodeproj，包含", len(source_builds), "個 Swift 檔案及", len(resource_builds), "項資源。")
+
+def source_paths(platform):
+    result = []
+    for path in sorted((ROOT / "NewsLiveApp").rglob("*.swift")):
+        relative = path.relative_to(ROOT).as_posix()
+        if platform == "ios" and "/Desktop/" in relative: continue
+        if platform != "ios" and "/Views/" in relative: continue
+        result.append(relative)
+    return result
+
+def configurations():
+    return json.loads((ROOT / "Config/platforms.json").read_text(encoding="utf8"))
+
+def project_graph():
+    global PROJECT
+    sys.path.insert(0, str(ROOT / ".test-tools"))
+    from openstep_parser import OpenStepDecoder
+    original = PROJECT
+    try:
+        with tempfile.TemporaryDirectory(prefix="newslive-project-") as directory:
+            PROJECT = Path(directory) / "NewsLive.xcodeproj"
+            with contextlib.redirect_stdout(io.StringIO()): generate_base()
+            with (PROJECT / "project.pbxproj").open(encoding="utf8") as handle:
+                graph = OpenStepDecoder.ParseFromFile(handle)
+    finally: PROJECT = original
+    objects = graph["objects"]; project = objects[graph["rootObject"]]
+    template = copy.deepcopy(objects[ident("target")])
+    source_template = copy.deepcopy(objects[ident("sources")])
+    file_refs = {obj["path"]: identity for identity,obj in objects.items() if obj.get("isa") == "PBXFileReference" and obj.get("sourceTree") == "SOURCE_ROOT"}
+    phases = {identity:copy.deepcopy(objects[identity]) for identity in template["buildPhases"]}
+    targets = []
+    for platform,details in configurations().items():
+        target_id = ident(platform + ":target")
+        target = copy.deepcopy(template); target["name"] = details["scheme"]
+        target["productName"] = "NewsLive"
+        build_phases = []
+        for old_id,phase in phases.items():
+            phase = copy.deepcopy(phase)
+            if phase["isa"] == "PBXSourcesBuildPhase":
+                builds = []
+                for path in source_paths(platform):
+                    build_id = ident(platform + ":source:" + path)
+                    objects[build_id] = {"isa":"PBXBuildFile", "fileRef":file_refs[path]}
+                    builds.append(build_id)
+                phase["files"] = builds
+            new_id = ident(platform + ":phase:" + old_id); objects[new_id] = phase; build_phases.append(new_id)
+        target["buildPhases"] = build_phases
+        target_configs = []
+        for mode in ("Debug", "Release"):
+            config = copy.deepcopy(objects[ident("target-"+mode)])
+            settings = config["buildSettings"]
+            settings.update(PRODUCT_BUNDLE_IDENTIFIER="com.luolihao.newslive", SDKROOT=details["sdk"], SUPPORTED_PLATFORMS=details["sdk"] + (" " + details["simulator_sdk"] if "simulator_sdk" in details else ""))
+            settings[details["deployment_key"]] = details["minimum"]
+            settings["ASSETCATALOG_COMPILER_APPICON_NAME"] = {"ios":"AppIcon", "macos":"AppIconMac", "visionos":"AppIconVision"}[platform]
+            settings["INFOPLIST_FILE"] = "Config/Info.plist" if platform == "ios" else "Config/Info-"+details["name"]+".plist"
+            settings["TARGETED_DEVICE_FAMILY"] = details.get("family", "")
+            if platform == "macos": settings.update(ENABLE_HARDENED_RUNTIME="YES", CODE_SIGN_ENTITLEMENTS="Config/macOS.entitlements", COMBINE_HIDPI_IMAGES="YES")
+            config_id = ident(platform + ":config:" + mode); objects[config_id] = config; target_configs.append(config_id)
+        config_list_id = ident(platform + ":configs")
+        objects[config_list_id] = {"isa":"XCConfigurationList", "buildConfigurations":target_configs,"defaultConfigurationIsVisible":"0","defaultConfigurationName":"Release"}
+        target["buildConfigurationList"] = config_list_id
+        product_id = ident(platform + ":product")
+        product = copy.deepcopy(objects[template["productReference"]]); product["name"] = details["scheme"]+".app"
+        objects[product_id] = product; target["productReference"] = product_id
+        objects[target_id] = target; targets.append(target_id)
+    # 只保留三个实际原生目标，基础模板不作为第四个目标暴露。
+    objects.pop(ident("target"), None)
+    project["targets"] = targets
+    objects[project["productRefGroup"]]["children"] = [objects[target]["productReference"] for target in targets]
+    project["attributes"]["TargetAttributes"] = {target:{"CreatedOnToolsVersion":"16.2"} for target in targets}
+    for mode in ("Debug", "Release"): objects[ident("project-"+mode)]["buildSettings"].pop("SDKROOT", None)
+    return graph
+
+def serialize(value, depth=0):
+    if isinstance(value, dict):
+        if not value: return "{}"
+        return "{\n"+"\n".join("\t"*(depth+1)+serialize(key)+" = "+serialize(item,depth+1)+";" for key,item in value.items())+"\n"+"\t"*depth+"}"
+    if isinstance(value, list): return "("+", ".join(serialize(item,depth) for item in value)+")"
+    return json.dumps(str(value), ensure_ascii=False)
+
+def generate():
+    graph = project_graph()
+    PROJECT.mkdir(exist_ok=True)
+    (PROJECT / "project.pbxproj").write_text("// !$*UTF8*$!\n"+serialize(graph)+"\n",encoding="utf8")
+    # 使用现有共享 Scheme 模板，只替换目标，不引入外部工程依赖。
+    with tempfile.TemporaryDirectory(prefix="newslive-schemes-") as directory:
+        global_project = globals()["PROJECT"]
+        try:
+            globals()["PROJECT"] = Path(directory)/"NewsLive.xcodeproj"
+            with contextlib.redirect_stdout(io.StringIO()): generate_base()
+            template = (globals()["PROJECT"]/"xcshareddata/xcschemes/NewsLive.xcscheme").read_text(encoding="utf8")
+        finally: globals()["PROJECT"] = global_project
+    schemes = PROJECT/"xcshareddata/xcschemes"; schemes.mkdir(parents=True,exist_ok=True)
+    for platform,details in configurations().items():
+        scheme = template.replace(ident("target"),ident(platform+":target")).replace('BlueprintName="NewsLive"','BlueprintName="'+details['scheme']+'"')
+        (schemes/(details["scheme"]+".xcscheme")).write_text(scheme,encoding="utf8")
+    base = plistlib.loads((ROOT/"Config/Info.plist").read_bytes())
+    mac = {key:value for key,value in base.items() if not key.startswith("UI") and key != "LSRequiresIPhoneOS"}
+    mac.update(LSApplicationCategoryType="public.app-category.news", NSHighResolutionCapable=True, LSMinimumSystemVersion="$(MACOSX_DEPLOYMENT_TARGET)")
+    (ROOT/"Config/Info-macOS.plist").write_bytes(plistlib.dumps(mac,sort_keys=False))
+    vision = dict(base); vision.pop("LSRequiresIPhoneOS",None); vision.pop("UISupportedInterfaceOrientations",None); vision.pop("UISupportedInterfaceOrientations~ipad",None)
+    vision["UIApplicationSceneManifest"] = {"UIApplicationSupportsMultipleScenes":False,"UIApplicationPreferredDefaultSceneSessionRole":"UIWindowSceneSessionRoleApplication"}
+    (ROOT/"Config/Info-visionOS.plist").write_bytes(plistlib.dumps(vision,sort_keys=False))
+    print("已生成 iOS、macOS、visionOS 三个原生目标。")
 
 if __name__ == "__main__": generate()

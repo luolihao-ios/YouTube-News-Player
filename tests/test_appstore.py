@@ -40,7 +40,7 @@ class AppStoreTests(unittest.TestCase):
             module().unique_app([{"id":"old","attributes":{"bundleId":"com.other.app"}}])
     def test_store_names_and_subtitles_fit_apple_limits(self):
         labels = module().LABELS
-        self.assertEqual(labels["en-US"]["name"], "NewsLive")
+        self.assertEqual(labels["en-US"]["name"], "YouTubeNewsLive")
         for values in labels.values():
             for value in values.values(): self.assertTrue(0 < len(value) <= 30)
 

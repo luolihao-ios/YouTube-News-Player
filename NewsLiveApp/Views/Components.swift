@@ -1,15 +1,6 @@
 import SwiftUI
 import NewsCore
 
-extension Color {
-    static let newsRed = Color(red: 0.94, green: 0.12, blue: 0.16)
-    static let newsBackground = Color(uiColor: .systemGroupedBackground)
-    init(newsHex: String) {
-        let value = UInt(newsHex, radix: 16) ?? 0x203DA7
-        self.init(red: Double((value >> 16) & 255) / 255, green: Double((value >> 8) & 255) / 255, blue: Double(value & 255) / 255)
-    }
-}
-
 struct ChannelLogo: View {
     let channel: ChannelSeed
     var url: URL?

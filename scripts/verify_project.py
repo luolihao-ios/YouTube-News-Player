@@ -32,6 +32,9 @@ def main():
     with (ROOT / "NewsLive.xcodeproj/project.pbxproj").open(encoding="utf8") as handle:
         project = OpenStepDecoder.ParseFromFile(handle)
     objects = project["objects"]
+    targets = [item for item in objects.values() if item.get("isa") == "PBXNativeTarget"]
+    if {item["name"] for item in targets} != {"NewsLive", "NewsLive-macOS", "NewsLive-visionOS"}:
+        errors.append("工程必须包含且仅包含 iOS、macOS、visionOS 三个原生目标")
     if project["rootObject"] not in objects: errors.append("Xcode rootObject 无效")
     app_files = set()
     for obj in objects.values():
@@ -47,9 +50,10 @@ def main():
     resource_files = {objects[objects[i]["fileRef"]]["path"] for phase in resource_phases for i in phase["files"]}
     for path in (ROOT / "NewsLiveApp/Resources").iterdir():
         if path.relative_to(ROOT).as_posix() not in resource_files: errors.append(f"资源未打包: {path.name}")
-    for path in [ROOT / "Config/Info.plist", ROOT / "NewsLiveApp/Resources/PrivacyInfo.xcprivacy"]:
+    for path in [ROOT / "Config/Info.plist", ROOT / "Config/Info-macOS.plist", ROOT / "Config/Info-visionOS.plist", ROOT / "Config/macOS.entitlements", ROOT / "NewsLiveApp/Resources/PrivacyInfo.xcprivacy"]:
         with path.open("rb") as handle: plistlib.load(handle)
-    ET.parse(ROOT / "NewsLive.xcodeproj/xcshareddata/xcschemes/NewsLive.xcscheme")
+    for scheme in ("NewsLive", "NewsLive-macOS", "NewsLive-visionOS"):
+        ET.parse(ROOT / f"NewsLive.xcodeproj/xcshareddata/xcschemes/{scheme}.xcscheme")
     seeds = json.loads((ROOT / "NewsLiveApp/Resources/channels.json").read_text(encoding="utf8"))
     if len({s["id"].lower() for s in seeds}) != len(seeds): errors.append("频道 handle 重复")
     for seed in seeds:

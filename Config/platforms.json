@@ -1,0 +1,5 @@
+{
+  "ios": {"name":"iOS","scheme":"NewsLive","sdk":"iphoneos","simulator_sdk":"iphonesimulator","destination":"generic/platform=iOS","simulator_destination":"generic/platform=iOS Simulator","apple_platform":"IOS","profile_type":"IOS_APP_STORE","family":"1,2","deployment_key":"IPHONEOS_DEPLOYMENT_TARGET","minimum":"17.0"},
+  "macos": {"name":"macOS","scheme":"NewsLive-macOS","sdk":"macosx","destination":"generic/platform=macOS","apple_platform":"MAC_OS","profile_type":"MAC_APP_STORE","deployment_key":"MACOSX_DEPLOYMENT_TARGET","minimum":"14.0"},
+  "visionos": {"name":"visionOS","scheme":"NewsLive-visionOS","sdk":"xros","simulator_sdk":"xrsimulator","destination":"generic/platform=visionOS","simulator_destination":"generic/platform=visionOS Simulator","apple_platform":"VISION_OS","profile_type":"IOS_APP_STORE","family":"7","deployment_key":"XROS_DEPLOYMENT_TARGET","minimum":"1.0"}
+}

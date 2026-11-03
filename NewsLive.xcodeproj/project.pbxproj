@@ -1,61 +1,776 @@
 // !$*UTF8*$!
 {
-	archiveVersion = 1;
-	classes = {};
-	objectVersion = 56;
-	objects = {
-		453B706A0C5049B3C24B8BA5 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NewsLiveApp/NewsLiveApp.swift"; sourceTree = SOURCE_ROOT; };
-		0D649FB18DDB797AEA36F285 = { isa = PBXBuildFile; fileRef = 453B706A0C5049B3C24B8BA5; };
-		F80EE18B634F948E336FE174 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NewsLiveApp/Playback/YouTubeWebView.swift"; sourceTree = SOURCE_ROOT; };
-		17B142B7159437E0DE58598B = { isa = PBXBuildFile; fileRef = F80EE18B634F948E336FE174; };
-		B2CDE7196E4EC3121CBFAFAF = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NewsLiveApp/Services/AppConfiguration.swift"; sourceTree = SOURCE_ROOT; };
-		88C789211C0246C844CB6AEB = { isa = PBXBuildFile; fileRef = B2CDE7196E4EC3121CBFAFAF; };
-		A7BD1EB3358E27320108F613 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NewsLiveApp/Services/NewsStore.swift"; sourceTree = SOURCE_ROOT; };
-		296463C2E2DCE52344204B23 = { isa = PBXBuildFile; fileRef = A7BD1EB3358E27320108F613; };
-		4A5B5624FC753F1C482FB00F = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NewsLiveApp/Services/UpdateChecker.swift"; sourceTree = SOURCE_ROOT; };
-		4E9A471592A711F64CBC49BC = { isa = PBXBuildFile; fileRef = 4A5B5624FC753F1C482FB00F; };
-		F4B4A5A9E50A66EA5AF0D601 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NewsLiveApp/Views/ChannelsView.swift"; sourceTree = SOURCE_ROOT; };
-		B9851804F438275A77623262 = { isa = PBXBuildFile; fileRef = F4B4A5A9E50A66EA5AF0D601; };
-		1B537655A8D2F997B1A60BEC = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NewsLiveApp/Views/Components.swift"; sourceTree = SOURCE_ROOT; };
-		893CAF6B3A025D00332298DB = { isa = PBXBuildFile; fileRef = 1B537655A8D2F997B1A60BEC; };
-		B5001181D076981CD59F267A = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NewsLiveApp/Views/FavoritesView.swift"; sourceTree = SOURCE_ROOT; };
-		924D13D4704ECF99C47A74BC = { isa = PBXBuildFile; fileRef = B5001181D076981CD59F267A; };
-		FF7EE979862C696D9444F808 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NewsLiveApp/Views/HomeView.swift"; sourceTree = SOURCE_ROOT; };
-		BC8B110F08A8AB0BB2C780D9 = { isa = PBXBuildFile; fileRef = FF7EE979862C696D9444F808; };
-		7F040037FA983A39A7BD576C = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NewsLiveApp/Views/PlayerView.swift"; sourceTree = SOURCE_ROOT; };
-		6CEB6D666552ACF495DD3AEE = { isa = PBXBuildFile; fileRef = 7F040037FA983A39A7BD576C; };
-		D65F628D65673FA92F66217F = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NewsLiveApp/Views/RootView.swift"; sourceTree = SOURCE_ROOT; };
-		6A8F32B242F2C36FDD4963B2 = { isa = PBXBuildFile; fileRef = D65F628D65673FA92F66217F; };
-		62D1141D4215C125F722ACD4 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NewsLiveApp/Views/SettingsView.swift"; sourceTree = SOURCE_ROOT; };
-		AF23FB79BDAC7C473EF0B5A9 = { isa = PBXBuildFile; fileRef = 62D1141D4215C125F722ACD4; };
-		DD7E7C551D5B27C66AFCBB1F = { isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "NewsLiveApp/Resources/Assets.xcassets"; sourceTree = SOURCE_ROOT; };
-		CA141E0AAB01DFAEDEEA984E = { isa = PBXBuildFile; fileRef = DD7E7C551D5B27C66AFCBB1F; };
-		BBBDBD246799442A65AD6836 = { isa = PBXFileReference; lastKnownFileType = text.json; path = "NewsLiveApp/Resources/channels.json"; sourceTree = SOURCE_ROOT; };
-		CF3E3357DF1470D7DAA2EAE8 = { isa = PBXBuildFile; fileRef = BBBDBD246799442A65AD6836; };
-		F8EE8C4B92C9D1FA7B8F1E85 = { isa = PBXFileReference; lastKnownFileType = text.xml; path = "NewsLiveApp/Resources/PrivacyInfo.xcprivacy"; sourceTree = SOURCE_ROOT; };
-		CE3715FE51BB7410E54261D8 = { isa = PBXBuildFile; fileRef = F8EE8C4B92C9D1FA7B8F1E85; };
-		229BE77A0490DE5287DA975B = { isa = PBXFileReference; lastKnownFileType = text.html; path = "NewsLiveApp/Resources/YouTubePlayer.html"; sourceTree = SOURCE_ROOT; };
-		800C674C2F121829251585CB = { isa = PBXBuildFile; fileRef = 229BE77A0490DE5287DA975B; };
-		6280E40656CCF01BD4D28240 = { isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config/Base.xcconfig; sourceTree = SOURCE_ROOT; };
-		06271BAF49532C879AA3C58B = { isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Config/Info.plist; sourceTree = SOURCE_ROOT; };
-		681C948D238C526E9E3424E0 = { isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NewsLive.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		0A3E27B8CA818264D75C8D81 = { isa = PBXGroup; children = (681C948D238C526E9E3424E0); name = Products; sourceTree = "<group>"; };
-		19F479106CE8C3BA8C106518 = { isa = PBXGroup; children = (453B706A0C5049B3C24B8BA5, F80EE18B634F948E336FE174, B2CDE7196E4EC3121CBFAFAF, A7BD1EB3358E27320108F613, 4A5B5624FC753F1C482FB00F, F4B4A5A9E50A66EA5AF0D601, 1B537655A8D2F997B1A60BEC, B5001181D076981CD59F267A, FF7EE979862C696D9444F808, 7F040037FA983A39A7BD576C, D65F628D65673FA92F66217F, 62D1141D4215C125F722ACD4, DD7E7C551D5B27C66AFCBB1F, BBBDBD246799442A65AD6836, F8EE8C4B92C9D1FA7B8F1E85, 229BE77A0490DE5287DA975B, 6280E40656CCF01BD4D28240, 06271BAF49532C879AA3C58B, 0A3E27B8CA818264D75C8D81); sourceTree = "<group>"; };
-		BC4A71180870F7945155FBB0 = { isa = XCLocalSwiftPackageReference; relativePath = Packages/NewsCore; };
-		ED3DC570B697046E1D6DC405 = { isa = XCSwiftPackageProductDependency; package = BC4A71180870F7945155FBB0; productName = NewsCore; };
-		6B6027BC8F0309F7F20982CA = { isa = PBXBuildFile; productRef = ED3DC570B697046E1D6DC405; };
-		878A52FC5FF6A57D50B7B870 = { isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (0D649FB18DDB797AEA36F285, 17B142B7159437E0DE58598B, 88C789211C0246C844CB6AEB, 296463C2E2DCE52344204B23, 4E9A471592A711F64CBC49BC, B9851804F438275A77623262, 893CAF6B3A025D00332298DB, 924D13D4704ECF99C47A74BC, BC8B110F08A8AB0BB2C780D9, 6CEB6D666552ACF495DD3AEE, 6A8F32B242F2C36FDD4963B2, AF23FB79BDAC7C473EF0B5A9); runOnlyForDeploymentPostprocessing = 0; };
-		41D311A605520FC7B8B9A980 = { isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (CA141E0AAB01DFAEDEEA984E, CF3E3357DF1470D7DAA2EAE8, CE3715FE51BB7410E54261D8, 800C674C2F121829251585CB); runOnlyForDeploymentPostprocessing = 0; };
-		E2AA269EB967A8853A258BFA = { isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (6B6027BC8F0309F7F20982CA); runOnlyForDeploymentPostprocessing = 0; };
-		A89352903B6608C023C91210 = { isa = PBXShellScriptBuildPhase; alwaysOutOfDate = 1; buildActionMask = 2147483647; files = (); inputPaths = (); outputPaths = (); name = "驗證發佈設定"; runOnlyForDeploymentPostprocessing = 0; shellPath = /bin/sh; shellScript = "if [ \"$CONFIGURATION\" = \"Release\" ]; then\n  /usr/bin/python3 \"$SRCROOT/scripts/validate_release.py\"\nfi\n"; };
-		488864B3D19480A82F7F1786 = { isa = XCBuildConfiguration; buildSettings = { CLANG_ENABLE_MODULES = YES; CLANG_ENABLE_OBJC_ARC = YES; SDKROOT = iphoneos; IPHONEOS_DEPLOYMENT_TARGET = 17.0; SWIFT_OPTIMIZATION_LEVEL = "-Onone"; DEBUG_INFORMATION_FORMAT = dwarf; ENABLE_TESTABILITY = YES; }; name = Debug; };
-		952548237D7F645F11D1E7B6 = { isa = XCBuildConfiguration; baseConfigurationReference = 6280E40656CCF01BD4D28240; buildSettings = { PRODUCT_NAME = NewsLive; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = NO; SWIFT_EMIT_LOC_STRINGS = YES; SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)"; }; name = Debug; };
-		35B1014F135DE9B45529B733 = { isa = XCBuildConfiguration; buildSettings = { CLANG_ENABLE_MODULES = YES; CLANG_ENABLE_OBJC_ARC = YES; SDKROOT = iphoneos; IPHONEOS_DEPLOYMENT_TARGET = 17.0; SWIFT_COMPILATION_MODE = wholemodule; DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym"; }; name = Release; };
-		E2D3A31BEAA1368FC62DA77A = { isa = XCBuildConfiguration; baseConfigurationReference = 6280E40656CCF01BD4D28240; buildSettings = { PRODUCT_NAME = NewsLive; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = NO; SWIFT_EMIT_LOC_STRINGS = YES; SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited)"; }; name = Release; };
-		B4E10CAA9C5E22150B71559C = { isa = XCConfigurationList; buildConfigurations = (488864B3D19480A82F7F1786, 35B1014F135DE9B45529B733); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
-		4A807E8A027297B0B93701FB = { isa = XCConfigurationList; buildConfigurations = (952548237D7F645F11D1E7B6, E2D3A31BEAA1368FC62DA77A); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
-		34A04005BCAF206EEC990BD9 = { isa = PBXNativeTarget; buildConfigurationList = 4A807E8A027297B0B93701FB; buildPhases = (A89352903B6608C023C91210, 878A52FC5FF6A57D50B7B870, E2AA269EB967A8853A258BFA, 41D311A605520FC7B8B9A980); buildRules = (); dependencies = (); name = NewsLive; packageProductDependencies = (ED3DC570B697046E1D6DC405); productName = NewsLive; productReference = 681C948D238C526E9E3424E0; productType = "com.apple.product-type.application"; };
-		244210E48437B6556980A702 = { isa = PBXProject; attributes = { BuildIndependentTargetsInParallel = YES; LastUpgradeCheck = 1620; TargetAttributes = { 34A04005BCAF206EEC990BD9 = { CreatedOnToolsVersion = 16.2; }; }; }; buildConfigurationList = B4E10CAA9C5E22150B71559C; compatibilityVersion = "Xcode 14.0"; developmentRegion = "zh-Hant"; hasScannedForEncodings = 0; knownRegions = ("zh-Hant", en, Base); mainGroup = 19F479106CE8C3BA8C106518; packageReferences = (BC4A71180870F7945155FBB0); productRefGroup = 0A3E27B8CA818264D75C8D81; projectDirPath = ""; projectRoot = ""; targets = (34A04005BCAF206EEC990BD9); };
+	"archiveVersion" = "1";
+	"classes" = {};
+	"objectVersion" = "56";
+	"objects" = {
+		"E659DBD1AFCB25F82AB39A0E" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"path" = "NewsLiveApp/DesignSystem.swift";
+			"sourceTree" = "SOURCE_ROOT";
+		};
+		"DC83898F543512DE2725B755" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "E659DBD1AFCB25F82AB39A0E";
+		};
+		"53246AECCFA97BCF4F943737" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"path" = "NewsLiveApp/Desktop/DesktopPlayerView.swift";
+			"sourceTree" = "SOURCE_ROOT";
+		};
+		"044B795126FE74671EA47724" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "53246AECCFA97BCF4F943737";
+		};
+		"90C74AD4A614A5FC920B172F" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"path" = "NewsLiveApp/Desktop/DesktopRootView.swift";
+			"sourceTree" = "SOURCE_ROOT";
+		};
+		"77F2DD1467A9BB0D966D8AF3" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "90C74AD4A614A5FC920B172F";
+		};
+		"B8485B000A5D86C7F7D549EB" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"path" = "NewsLiveApp/Desktop/DesktopSettingsView.swift";
+			"sourceTree" = "SOURCE_ROOT";
+		};
+		"1BFF22AE0F51F7BCFBDA9400" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "B8485B000A5D86C7F7D549EB";
+		};
+		"453B706A0C5049B3C24B8BA5" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"path" = "NewsLiveApp/NewsLiveApp.swift";
+			"sourceTree" = "SOURCE_ROOT";
+		};
+		"0D649FB18DDB797AEA36F285" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "453B706A0C5049B3C24B8BA5";
+		};
+		"F80EE18B634F948E336FE174" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"path" = "NewsLiveApp/Playback/YouTubeWebView.swift";
+			"sourceTree" = "SOURCE_ROOT";
+		};
+		"17B142B7159437E0DE58598B" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "F80EE18B634F948E336FE174";
+		};
+		"B2CDE7196E4EC3121CBFAFAF" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"path" = "NewsLiveApp/Services/AppConfiguration.swift";
+			"sourceTree" = "SOURCE_ROOT";
+		};
+		"88C789211C0246C844CB6AEB" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "B2CDE7196E4EC3121CBFAFAF";
+		};
+		"A7BD1EB3358E27320108F613" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"path" = "NewsLiveApp/Services/NewsStore.swift";
+			"sourceTree" = "SOURCE_ROOT";
+		};
+		"296463C2E2DCE52344204B23" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "A7BD1EB3358E27320108F613";
+		};
+		"4A5B5624FC753F1C482FB00F" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"path" = "NewsLiveApp/Services/UpdateChecker.swift";
+			"sourceTree" = "SOURCE_ROOT";
+		};
+		"4E9A471592A711F64CBC49BC" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "4A5B5624FC753F1C482FB00F";
+		};
+		"F4B4A5A9E50A66EA5AF0D601" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"path" = "NewsLiveApp/Views/ChannelsView.swift";
+			"sourceTree" = "SOURCE_ROOT";
+		};
+		"B9851804F438275A77623262" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "F4B4A5A9E50A66EA5AF0D601";
+		};
+		"1B537655A8D2F997B1A60BEC" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"path" = "NewsLiveApp/Views/Components.swift";
+			"sourceTree" = "SOURCE_ROOT";
+		};
+		"893CAF6B3A025D00332298DB" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "1B537655A8D2F997B1A60BEC";
+		};
+		"B5001181D076981CD59F267A" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"path" = "NewsLiveApp/Views/FavoritesView.swift";
+			"sourceTree" = "SOURCE_ROOT";
+		};
+		"924D13D4704ECF99C47A74BC" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "B5001181D076981CD59F267A";
+		};
+		"FF7EE979862C696D9444F808" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"path" = "NewsLiveApp/Views/HomeView.swift";
+			"sourceTree" = "SOURCE_ROOT";
+		};
+		"BC8B110F08A8AB0BB2C780D9" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "FF7EE979862C696D9444F808";
+		};
+		"7F040037FA983A39A7BD576C" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"path" = "NewsLiveApp/Views/PlayerView.swift";
+			"sourceTree" = "SOURCE_ROOT";
+		};
+		"6CEB6D666552ACF495DD3AEE" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "7F040037FA983A39A7BD576C";
+		};
+		"D65F628D65673FA92F66217F" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"path" = "NewsLiveApp/Views/RootView.swift";
+			"sourceTree" = "SOURCE_ROOT";
+		};
+		"6A8F32B242F2C36FDD4963B2" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "D65F628D65673FA92F66217F";
+		};
+		"62D1141D4215C125F722ACD4" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "sourcecode.swift";
+			"path" = "NewsLiveApp/Views/SettingsView.swift";
+			"sourceTree" = "SOURCE_ROOT";
+		};
+		"AF23FB79BDAC7C473EF0B5A9" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "62D1141D4215C125F722ACD4";
+		};
+		"DD7E7C551D5B27C66AFCBB1F" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "folder.assetcatalog";
+			"path" = "NewsLiveApp/Resources/Assets.xcassets";
+			"sourceTree" = "SOURCE_ROOT";
+		};
+		"CA141E0AAB01DFAEDEEA984E" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "DD7E7C551D5B27C66AFCBB1F";
+		};
+		"BBBDBD246799442A65AD6836" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "text.json";
+			"path" = "NewsLiveApp/Resources/channels.json";
+			"sourceTree" = "SOURCE_ROOT";
+		};
+		"CF3E3357DF1470D7DAA2EAE8" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "BBBDBD246799442A65AD6836";
+		};
+		"F8EE8C4B92C9D1FA7B8F1E85" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "text.xml";
+			"path" = "NewsLiveApp/Resources/PrivacyInfo.xcprivacy";
+			"sourceTree" = "SOURCE_ROOT";
+		};
+		"CE3715FE51BB7410E54261D8" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "F8EE8C4B92C9D1FA7B8F1E85";
+		};
+		"229BE77A0490DE5287DA975B" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "text.html";
+			"path" = "NewsLiveApp/Resources/YouTubePlayer.html";
+			"sourceTree" = "SOURCE_ROOT";
+		};
+		"800C674C2F121829251585CB" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "229BE77A0490DE5287DA975B";
+		};
+		"6280E40656CCF01BD4D28240" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "text.xcconfig";
+			"path" = "Config/Base.xcconfig";
+			"sourceTree" = "SOURCE_ROOT";
+		};
+		"06271BAF49532C879AA3C58B" = {
+			"isa" = "PBXFileReference";
+			"lastKnownFileType" = "text.plist.xml";
+			"path" = "Config/Info.plist";
+			"sourceTree" = "SOURCE_ROOT";
+		};
+		"681C948D238C526E9E3424E0" = {
+			"isa" = "PBXFileReference";
+			"explicitFileType" = "wrapper.application";
+			"includeInIndex" = "0";
+			"path" = "NewsLive.app";
+			"sourceTree" = "BUILT_PRODUCTS_DIR";
+		};
+		"0A3E27B8CA818264D75C8D81" = {
+			"isa" = "PBXGroup";
+			"children" = ("729B379112DC74F1A7FB4A1E", "7DC270650D17483F49955363", "AFDB64AA061E68A82469483D");
+			"name" = "Products";
+			"sourceTree" = "<group>";
+		};
+		"19F479106CE8C3BA8C106518" = {
+			"isa" = "PBXGroup";
+			"children" = ("E659DBD1AFCB25F82AB39A0E", "53246AECCFA97BCF4F943737", "90C74AD4A614A5FC920B172F", "B8485B000A5D86C7F7D549EB", "453B706A0C5049B3C24B8BA5", "F80EE18B634F948E336FE174", "B2CDE7196E4EC3121CBFAFAF", "A7BD1EB3358E27320108F613", "4A5B5624FC753F1C482FB00F", "F4B4A5A9E50A66EA5AF0D601", "1B537655A8D2F997B1A60BEC", "B5001181D076981CD59F267A", "FF7EE979862C696D9444F808", "7F040037FA983A39A7BD576C", "D65F628D65673FA92F66217F", "62D1141D4215C125F722ACD4", "DD7E7C551D5B27C66AFCBB1F", "BBBDBD246799442A65AD6836", "F8EE8C4B92C9D1FA7B8F1E85", "229BE77A0490DE5287DA975B", "6280E40656CCF01BD4D28240", "06271BAF49532C879AA3C58B", "0A3E27B8CA818264D75C8D81");
+			"sourceTree" = "<group>";
+		};
+		"BC4A71180870F7945155FBB0" = {
+			"isa" = "XCLocalSwiftPackageReference";
+			"relativePath" = "Packages/NewsCore";
+		};
+		"ED3DC570B697046E1D6DC405" = {
+			"isa" = "XCSwiftPackageProductDependency";
+			"package" = "BC4A71180870F7945155FBB0";
+			"productName" = "NewsCore";
+		};
+		"6B6027BC8F0309F7F20982CA" = {
+			"isa" = "PBXBuildFile";
+			"productRef" = "ED3DC570B697046E1D6DC405";
+		};
+		"878A52FC5FF6A57D50B7B870" = {
+			"isa" = "PBXSourcesBuildPhase";
+			"buildActionMask" = "2147483647";
+			"files" = ("DC83898F543512DE2725B755", "044B795126FE74671EA47724", "77F2DD1467A9BB0D966D8AF3", "1BFF22AE0F51F7BCFBDA9400", "0D649FB18DDB797AEA36F285", "17B142B7159437E0DE58598B", "88C789211C0246C844CB6AEB", "296463C2E2DCE52344204B23", "4E9A471592A711F64CBC49BC", "B9851804F438275A77623262", "893CAF6B3A025D00332298DB", "924D13D4704ECF99C47A74BC", "BC8B110F08A8AB0BB2C780D9", "6CEB6D666552ACF495DD3AEE", "6A8F32B242F2C36FDD4963B2", "AF23FB79BDAC7C473EF0B5A9");
+			"runOnlyForDeploymentPostprocessing" = "0";
+		};
+		"41D311A605520FC7B8B9A980" = {
+			"isa" = "PBXResourcesBuildPhase";
+			"buildActionMask" = "2147483647";
+			"files" = ("CA141E0AAB01DFAEDEEA984E", "CF3E3357DF1470D7DAA2EAE8", "CE3715FE51BB7410E54261D8", "800C674C2F121829251585CB");
+			"runOnlyForDeploymentPostprocessing" = "0";
+		};
+		"E2AA269EB967A8853A258BFA" = {
+			"isa" = "PBXFrameworksBuildPhase";
+			"buildActionMask" = "2147483647";
+			"files" = ("6B6027BC8F0309F7F20982CA");
+			"runOnlyForDeploymentPostprocessing" = "0";
+		};
+		"A89352903B6608C023C91210" = {
+			"isa" = "PBXShellScriptBuildPhase";
+			"alwaysOutOfDate" = "1";
+			"buildActionMask" = "2147483647";
+			"files" = ();
+			"inputPaths" = ();
+			"outputPaths" = ();
+			"name" = "驗證發佈設定";
+			"runOnlyForDeploymentPostprocessing" = "0";
+			"shellPath" = "/bin/sh";
+			"shellScript" = "if [ \"$CONFIGURATION\" = \"Release\" ]; then\n  /usr/bin/python3 \"$SRCROOT/scripts/validate_release.py\"\nfi\n";
+		};
+		"488864B3D19480A82F7F1786" = {
+			"isa" = "XCBuildConfiguration";
+			"buildSettings" = {
+				"CLANG_ENABLE_MODULES" = "YES";
+				"CLANG_ENABLE_OBJC_ARC" = "YES";
+				"IPHONEOS_DEPLOYMENT_TARGET" = "17.0";
+				"SWIFT_OPTIMIZATION_LEVEL" = "-Onone";
+				"DEBUG_INFORMATION_FORMAT" = "dwarf";
+				"ENABLE_TESTABILITY" = "YES";
+			};
+			"name" = "Debug";
+		};
+		"952548237D7F645F11D1E7B6" = {
+			"isa" = "XCBuildConfiguration";
+			"baseConfigurationReference" = "6280E40656CCF01BD4D28240";
+			"buildSettings" = {
+				"PRODUCT_NAME" = "NewsLive";
+				"SUPPORTED_PLATFORMS" = "iphoneos iphonesimulator";
+				"SUPPORTS_MACCATALYST" = "NO";
+				"SWIFT_EMIT_LOC_STRINGS" = "YES";
+				"SWIFT_ACTIVE_COMPILATION_CONDITIONS" = "DEBUG $(inherited)";
+			};
+			"name" = "Debug";
+		};
+		"35B1014F135DE9B45529B733" = {
+			"isa" = "XCBuildConfiguration";
+			"buildSettings" = {
+				"CLANG_ENABLE_MODULES" = "YES";
+				"CLANG_ENABLE_OBJC_ARC" = "YES";
+				"IPHONEOS_DEPLOYMENT_TARGET" = "17.0";
+				"SWIFT_COMPILATION_MODE" = "wholemodule";
+				"DEBUG_INFORMATION_FORMAT" = "dwarf-with-dsym";
+			};
+			"name" = "Release";
+		};
+		"E2D3A31BEAA1368FC62DA77A" = {
+			"isa" = "XCBuildConfiguration";
+			"baseConfigurationReference" = "6280E40656CCF01BD4D28240";
+			"buildSettings" = {
+				"PRODUCT_NAME" = "NewsLive";
+				"SUPPORTED_PLATFORMS" = "iphoneos iphonesimulator";
+				"SUPPORTS_MACCATALYST" = "NO";
+				"SWIFT_EMIT_LOC_STRINGS" = "YES";
+				"SWIFT_ACTIVE_COMPILATION_CONDITIONS" = "$(inherited)";
+			};
+			"name" = "Release";
+		};
+		"B4E10CAA9C5E22150B71559C" = {
+			"isa" = "XCConfigurationList";
+			"buildConfigurations" = ("488864B3D19480A82F7F1786", "35B1014F135DE9B45529B733");
+			"defaultConfigurationIsVisible" = "0";
+			"defaultConfigurationName" = "Release";
+		};
+		"4A807E8A027297B0B93701FB" = {
+			"isa" = "XCConfigurationList";
+			"buildConfigurations" = ("952548237D7F645F11D1E7B6", "E2D3A31BEAA1368FC62DA77A");
+			"defaultConfigurationIsVisible" = "0";
+			"defaultConfigurationName" = "Release";
+		};
+		"244210E48437B6556980A702" = {
+			"isa" = "PBXProject";
+			"attributes" = {
+				"BuildIndependentTargetsInParallel" = "YES";
+				"LastUpgradeCheck" = "1620";
+				"TargetAttributes" = {
+					"FB9399914FE4E505B6039AA5" = {
+						"CreatedOnToolsVersion" = "16.2";
+					};
+					"145A0FB3906CEC2FB8D34ABB" = {
+						"CreatedOnToolsVersion" = "16.2";
+					};
+					"65056063C7823E6CFD464963" = {
+						"CreatedOnToolsVersion" = "16.2";
+					};
+				};
+			};
+			"buildConfigurationList" = "B4E10CAA9C5E22150B71559C";
+			"compatibilityVersion" = "Xcode 14.0";
+			"developmentRegion" = "zh-Hant";
+			"hasScannedForEncodings" = "0";
+			"knownRegions" = ("zh-Hant", "en", "Base");
+			"mainGroup" = "19F479106CE8C3BA8C106518";
+			"packageReferences" = ("BC4A71180870F7945155FBB0");
+			"productRefGroup" = "0A3E27B8CA818264D75C8D81";
+			"projectDirPath" = "";
+			"projectRoot" = "";
+			"targets" = ("FB9399914FE4E505B6039AA5", "145A0FB3906CEC2FB8D34ABB", "65056063C7823E6CFD464963");
+		};
+		"E55C81AF447CA9CA4BABF7CE" = {
+			"isa" = "PBXShellScriptBuildPhase";
+			"alwaysOutOfDate" = "1";
+			"buildActionMask" = "2147483647";
+			"files" = ();
+			"inputPaths" = ();
+			"outputPaths" = ();
+			"name" = "驗證發佈設定";
+			"runOnlyForDeploymentPostprocessing" = "0";
+			"shellPath" = "/bin/sh";
+			"shellScript" = "if [ \"$CONFIGURATION\" = \"Release\" ]; then\n  /usr/bin/python3 \"$SRCROOT/scripts/validate_release.py\"\nfi\n";
+		};
+		"E89B65147EB5640391303D1D" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "E659DBD1AFCB25F82AB39A0E";
+		};
+		"F9451AC19A35749D0A2BA184" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "453B706A0C5049B3C24B8BA5";
+		};
+		"DDCC3265503188E5BB38DE0B" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "F80EE18B634F948E336FE174";
+		};
+		"10AA1FDA5A59D3BA2D60CC42" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "B2CDE7196E4EC3121CBFAFAF";
+		};
+		"9D285A5BC846DA3F8B4A213C" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "A7BD1EB3358E27320108F613";
+		};
+		"F83126D30669D9A702C9041D" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "4A5B5624FC753F1C482FB00F";
+		};
+		"5526E0EC3F38CEFF3CC9D88B" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "F4B4A5A9E50A66EA5AF0D601";
+		};
+		"184D9A6EBEEBD75E48A4B5E4" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "1B537655A8D2F997B1A60BEC";
+		};
+		"717783E991383C59C178EB71" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "B5001181D076981CD59F267A";
+		};
+		"B58DEAE547514B018CC36624" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "FF7EE979862C696D9444F808";
+		};
+		"8C9925477E2BD651A6C8CF6A" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "7F040037FA983A39A7BD576C";
+		};
+		"AA084B47FDA01B7B7A6D13EA" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "D65F628D65673FA92F66217F";
+		};
+		"F9523D2CA883ABE623658DB0" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "62D1141D4215C125F722ACD4";
+		};
+		"613111934C88B894599FDFB6" = {
+			"isa" = "PBXSourcesBuildPhase";
+			"buildActionMask" = "2147483647";
+			"files" = ("E89B65147EB5640391303D1D", "F9451AC19A35749D0A2BA184", "DDCC3265503188E5BB38DE0B", "10AA1FDA5A59D3BA2D60CC42", "9D285A5BC846DA3F8B4A213C", "F83126D30669D9A702C9041D", "5526E0EC3F38CEFF3CC9D88B", "184D9A6EBEEBD75E48A4B5E4", "717783E991383C59C178EB71", "B58DEAE547514B018CC36624", "8C9925477E2BD651A6C8CF6A", "AA084B47FDA01B7B7A6D13EA", "F9523D2CA883ABE623658DB0");
+			"runOnlyForDeploymentPostprocessing" = "0";
+		};
+		"05CB4D47E298FDBBF4021EB1" = {
+			"isa" = "PBXFrameworksBuildPhase";
+			"buildActionMask" = "2147483647";
+			"files" = ("6B6027BC8F0309F7F20982CA");
+			"runOnlyForDeploymentPostprocessing" = "0";
+		};
+		"039DC9598CBBD7ACD8DACBBF" = {
+			"isa" = "PBXResourcesBuildPhase";
+			"buildActionMask" = "2147483647";
+			"files" = ("CA141E0AAB01DFAEDEEA984E", "CF3E3357DF1470D7DAA2EAE8", "CE3715FE51BB7410E54261D8", "800C674C2F121829251585CB");
+			"runOnlyForDeploymentPostprocessing" = "0";
+		};
+		"678A1069968B3B0B7FB6EAB2" = {
+			"isa" = "XCBuildConfiguration";
+			"baseConfigurationReference" = "6280E40656CCF01BD4D28240";
+			"buildSettings" = {
+				"PRODUCT_NAME" = "NewsLive";
+				"SUPPORTED_PLATFORMS" = "iphoneos iphonesimulator";
+				"SUPPORTS_MACCATALYST" = "NO";
+				"SWIFT_EMIT_LOC_STRINGS" = "YES";
+				"SWIFT_ACTIVE_COMPILATION_CONDITIONS" = "DEBUG $(inherited)";
+				"PRODUCT_BUNDLE_IDENTIFIER" = "com.luolihao.newslive";
+				"SDKROOT" = "iphoneos";
+				"IPHONEOS_DEPLOYMENT_TARGET" = "17.0";
+				"ASSETCATALOG_COMPILER_APPICON_NAME" = "AppIcon";
+				"INFOPLIST_FILE" = "Config/Info.plist";
+				"TARGETED_DEVICE_FAMILY" = "1,2";
+			};
+			"name" = "Debug";
+		};
+		"6BFC7306CE5E1A3E67AE931C" = {
+			"isa" = "XCBuildConfiguration";
+			"baseConfigurationReference" = "6280E40656CCF01BD4D28240";
+			"buildSettings" = {
+				"PRODUCT_NAME" = "NewsLive";
+				"SUPPORTED_PLATFORMS" = "iphoneos iphonesimulator";
+				"SUPPORTS_MACCATALYST" = "NO";
+				"SWIFT_EMIT_LOC_STRINGS" = "YES";
+				"SWIFT_ACTIVE_COMPILATION_CONDITIONS" = "$(inherited)";
+				"PRODUCT_BUNDLE_IDENTIFIER" = "com.luolihao.newslive";
+				"SDKROOT" = "iphoneos";
+				"IPHONEOS_DEPLOYMENT_TARGET" = "17.0";
+				"ASSETCATALOG_COMPILER_APPICON_NAME" = "AppIcon";
+				"INFOPLIST_FILE" = "Config/Info.plist";
+				"TARGETED_DEVICE_FAMILY" = "1,2";
+			};
+			"name" = "Release";
+		};
+		"BA2BE3F7F20040F88DA279BA" = {
+			"isa" = "XCConfigurationList";
+			"buildConfigurations" = ("678A1069968B3B0B7FB6EAB2", "6BFC7306CE5E1A3E67AE931C");
+			"defaultConfigurationIsVisible" = "0";
+			"defaultConfigurationName" = "Release";
+		};
+		"729B379112DC74F1A7FB4A1E" = {
+			"isa" = "PBXFileReference";
+			"explicitFileType" = "wrapper.application";
+			"includeInIndex" = "0";
+			"path" = "NewsLive.app";
+			"sourceTree" = "BUILT_PRODUCTS_DIR";
+			"name" = "NewsLive.app";
+		};
+		"FB9399914FE4E505B6039AA5" = {
+			"isa" = "PBXNativeTarget";
+			"buildConfigurationList" = "BA2BE3F7F20040F88DA279BA";
+			"buildPhases" = ("E55C81AF447CA9CA4BABF7CE", "613111934C88B894599FDFB6", "05CB4D47E298FDBBF4021EB1", "039DC9598CBBD7ACD8DACBBF");
+			"buildRules" = ();
+			"dependencies" = ();
+			"name" = "NewsLive";
+			"packageProductDependencies" = ("ED3DC570B697046E1D6DC405");
+			"productName" = "NewsLive";
+			"productReference" = "729B379112DC74F1A7FB4A1E";
+			"productType" = "com.apple.product-type.application";
+		};
+		"E45A924CBED36A8E6AC206D8" = {
+			"isa" = "PBXShellScriptBuildPhase";
+			"alwaysOutOfDate" = "1";
+			"buildActionMask" = "2147483647";
+			"files" = ();
+			"inputPaths" = ();
+			"outputPaths" = ();
+			"name" = "驗證發佈設定";
+			"runOnlyForDeploymentPostprocessing" = "0";
+			"shellPath" = "/bin/sh";
+			"shellScript" = "if [ \"$CONFIGURATION\" = \"Release\" ]; then\n  /usr/bin/python3 \"$SRCROOT/scripts/validate_release.py\"\nfi\n";
+		};
+		"0C42054014D2C3EA442E2481" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "E659DBD1AFCB25F82AB39A0E";
+		};
+		"52844CE2219332C1A475573D" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "53246AECCFA97BCF4F943737";
+		};
+		"04AB6D8DB54517240F7228E5" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "90C74AD4A614A5FC920B172F";
+		};
+		"87746FA31A74F76AECA58060" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "B8485B000A5D86C7F7D549EB";
+		};
+		"D09B89F9FDC4A8C2444A6EE9" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "453B706A0C5049B3C24B8BA5";
+		};
+		"52BD0AEF2BA084DC69E1A953" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "F80EE18B634F948E336FE174";
+		};
+		"C8108FA343400DF05860F4EA" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "B2CDE7196E4EC3121CBFAFAF";
+		};
+		"024B95ED17E0FD635A4117D1" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "A7BD1EB3358E27320108F613";
+		};
+		"B76D346E44AB18C738E1B688" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "4A5B5624FC753F1C482FB00F";
+		};
+		"396A600B0D5F7F758903D3F6" = {
+			"isa" = "PBXSourcesBuildPhase";
+			"buildActionMask" = "2147483647";
+			"files" = ("0C42054014D2C3EA442E2481", "52844CE2219332C1A475573D", "04AB6D8DB54517240F7228E5", "87746FA31A74F76AECA58060", "D09B89F9FDC4A8C2444A6EE9", "52BD0AEF2BA084DC69E1A953", "C8108FA343400DF05860F4EA", "024B95ED17E0FD635A4117D1", "B76D346E44AB18C738E1B688");
+			"runOnlyForDeploymentPostprocessing" = "0";
+		};
+		"9A2B258CE7E38614B60397CB" = {
+			"isa" = "PBXFrameworksBuildPhase";
+			"buildActionMask" = "2147483647";
+			"files" = ("6B6027BC8F0309F7F20982CA");
+			"runOnlyForDeploymentPostprocessing" = "0";
+		};
+		"7488E0703E3DE1FDA5312F3B" = {
+			"isa" = "PBXResourcesBuildPhase";
+			"buildActionMask" = "2147483647";
+			"files" = ("CA141E0AAB01DFAEDEEA984E", "CF3E3357DF1470D7DAA2EAE8", "CE3715FE51BB7410E54261D8", "800C674C2F121829251585CB");
+			"runOnlyForDeploymentPostprocessing" = "0";
+		};
+		"297DC1BF41FBBEA75264E80C" = {
+			"isa" = "XCBuildConfiguration";
+			"baseConfigurationReference" = "6280E40656CCF01BD4D28240";
+			"buildSettings" = {
+				"PRODUCT_NAME" = "NewsLive";
+				"SUPPORTED_PLATFORMS" = "macosx";
+				"SUPPORTS_MACCATALYST" = "NO";
+				"SWIFT_EMIT_LOC_STRINGS" = "YES";
+				"SWIFT_ACTIVE_COMPILATION_CONDITIONS" = "DEBUG $(inherited)";
+				"PRODUCT_BUNDLE_IDENTIFIER" = "com.luolihao.newslive";
+				"SDKROOT" = "macosx";
+				"MACOSX_DEPLOYMENT_TARGET" = "14.0";
+				"ASSETCATALOG_COMPILER_APPICON_NAME" = "AppIconMac";
+				"INFOPLIST_FILE" = "Config/Info-macOS.plist";
+				"TARGETED_DEVICE_FAMILY" = "";
+				"ENABLE_HARDENED_RUNTIME" = "YES";
+				"CODE_SIGN_ENTITLEMENTS" = "Config/macOS.entitlements";
+				"COMBINE_HIDPI_IMAGES" = "YES";
+			};
+			"name" = "Debug";
+		};
+		"0026964CE365EB547335EAF5" = {
+			"isa" = "XCBuildConfiguration";
+			"baseConfigurationReference" = "6280E40656CCF01BD4D28240";
+			"buildSettings" = {
+				"PRODUCT_NAME" = "NewsLive";
+				"SUPPORTED_PLATFORMS" = "macosx";
+				"SUPPORTS_MACCATALYST" = "NO";
+				"SWIFT_EMIT_LOC_STRINGS" = "YES";
+				"SWIFT_ACTIVE_COMPILATION_CONDITIONS" = "$(inherited)";
+				"PRODUCT_BUNDLE_IDENTIFIER" = "com.luolihao.newslive";
+				"SDKROOT" = "macosx";
+				"MACOSX_DEPLOYMENT_TARGET" = "14.0";
+				"ASSETCATALOG_COMPILER_APPICON_NAME" = "AppIconMac";
+				"INFOPLIST_FILE" = "Config/Info-macOS.plist";
+				"TARGETED_DEVICE_FAMILY" = "";
+				"ENABLE_HARDENED_RUNTIME" = "YES";
+				"CODE_SIGN_ENTITLEMENTS" = "Config/macOS.entitlements";
+				"COMBINE_HIDPI_IMAGES" = "YES";
+			};
+			"name" = "Release";
+		};
+		"7803F89E68AD310E0180340A" = {
+			"isa" = "XCConfigurationList";
+			"buildConfigurations" = ("297DC1BF41FBBEA75264E80C", "0026964CE365EB547335EAF5");
+			"defaultConfigurationIsVisible" = "0";
+			"defaultConfigurationName" = "Release";
+		};
+		"7DC270650D17483F49955363" = {
+			"isa" = "PBXFileReference";
+			"explicitFileType" = "wrapper.application";
+			"includeInIndex" = "0";
+			"path" = "NewsLive.app";
+			"sourceTree" = "BUILT_PRODUCTS_DIR";
+			"name" = "NewsLive-macOS.app";
+		};
+		"145A0FB3906CEC2FB8D34ABB" = {
+			"isa" = "PBXNativeTarget";
+			"buildConfigurationList" = "7803F89E68AD310E0180340A";
+			"buildPhases" = ("E45A924CBED36A8E6AC206D8", "396A600B0D5F7F758903D3F6", "9A2B258CE7E38614B60397CB", "7488E0703E3DE1FDA5312F3B");
+			"buildRules" = ();
+			"dependencies" = ();
+			"name" = "NewsLive-macOS";
+			"packageProductDependencies" = ("ED3DC570B697046E1D6DC405");
+			"productName" = "NewsLive";
+			"productReference" = "7DC270650D17483F49955363";
+			"productType" = "com.apple.product-type.application";
+		};
+		"0D9ECA5B3B5D03B1A651694A" = {
+			"isa" = "PBXShellScriptBuildPhase";
+			"alwaysOutOfDate" = "1";
+			"buildActionMask" = "2147483647";
+			"files" = ();
+			"inputPaths" = ();
+			"outputPaths" = ();
+			"name" = "驗證發佈設定";
+			"runOnlyForDeploymentPostprocessing" = "0";
+			"shellPath" = "/bin/sh";
+			"shellScript" = "if [ \"$CONFIGURATION\" = \"Release\" ]; then\n  /usr/bin/python3 \"$SRCROOT/scripts/validate_release.py\"\nfi\n";
+		};
+		"F9C846D370316AAA8B711F05" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "E659DBD1AFCB25F82AB39A0E";
+		};
+		"BA38C10726A6486C148CB39B" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "53246AECCFA97BCF4F943737";
+		};
+		"6468943F7D6953CE25997768" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "90C74AD4A614A5FC920B172F";
+		};
+		"70F43F8B3E6A970AEC2C6D62" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "B8485B000A5D86C7F7D549EB";
+		};
+		"339BE7BB2B7560FA54F9B0AF" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "453B706A0C5049B3C24B8BA5";
+		};
+		"4EA20576EA9B17902D1CAFF6" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "F80EE18B634F948E336FE174";
+		};
+		"C922D8B977FDA2F68D3167F8" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "B2CDE7196E4EC3121CBFAFAF";
+		};
+		"45011C199511A1B6BF6BB671" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "A7BD1EB3358E27320108F613";
+		};
+		"64F6D03CB947C36186622CA1" = {
+			"isa" = "PBXBuildFile";
+			"fileRef" = "4A5B5624FC753F1C482FB00F";
+		};
+		"EFB5D6155FC5E8B42CE54D1A" = {
+			"isa" = "PBXSourcesBuildPhase";
+			"buildActionMask" = "2147483647";
+			"files" = ("F9C846D370316AAA8B711F05", "BA38C10726A6486C148CB39B", "6468943F7D6953CE25997768", "70F43F8B3E6A970AEC2C6D62", "339BE7BB2B7560FA54F9B0AF", "4EA20576EA9B17902D1CAFF6", "C922D8B977FDA2F68D3167F8", "45011C199511A1B6BF6BB671", "64F6D03CB947C36186622CA1");
+			"runOnlyForDeploymentPostprocessing" = "0";
+		};
+		"E03BD0FAB4CE263C09DEB65D" = {
+			"isa" = "PBXFrameworksBuildPhase";
+			"buildActionMask" = "2147483647";
+			"files" = ("6B6027BC8F0309F7F20982CA");
+			"runOnlyForDeploymentPostprocessing" = "0";
+		};
+		"BEF79FADD134459508FC1C31" = {
+			"isa" = "PBXResourcesBuildPhase";
+			"buildActionMask" = "2147483647";
+			"files" = ("CA141E0AAB01DFAEDEEA984E", "CF3E3357DF1470D7DAA2EAE8", "CE3715FE51BB7410E54261D8", "800C674C2F121829251585CB");
+			"runOnlyForDeploymentPostprocessing" = "0";
+		};
+		"DEB21EA6C2597A3A89BB57EC" = {
+			"isa" = "XCBuildConfiguration";
+			"baseConfigurationReference" = "6280E40656CCF01BD4D28240";
+			"buildSettings" = {
+				"PRODUCT_NAME" = "NewsLive";
+				"SUPPORTED_PLATFORMS" = "xros xrsimulator";
+				"SUPPORTS_MACCATALYST" = "NO";
+				"SWIFT_EMIT_LOC_STRINGS" = "YES";
+				"SWIFT_ACTIVE_COMPILATION_CONDITIONS" = "DEBUG $(inherited)";
+				"PRODUCT_BUNDLE_IDENTIFIER" = "com.luolihao.newslive";
+				"SDKROOT" = "xros";
+				"XROS_DEPLOYMENT_TARGET" = "1.0";
+				"ASSETCATALOG_COMPILER_APPICON_NAME" = "AppIconVision";
+				"INFOPLIST_FILE" = "Config/Info-visionOS.plist";
+				"TARGETED_DEVICE_FAMILY" = "7";
+			};
+			"name" = "Debug";
+		};
+		"E7DCDEEFBBE76D8A8FA8B9A2" = {
+			"isa" = "XCBuildConfiguration";
+			"baseConfigurationReference" = "6280E40656CCF01BD4D28240";
+			"buildSettings" = {
+				"PRODUCT_NAME" = "NewsLive";
+				"SUPPORTED_PLATFORMS" = "xros xrsimulator";
+				"SUPPORTS_MACCATALYST" = "NO";
+				"SWIFT_EMIT_LOC_STRINGS" = "YES";
+				"SWIFT_ACTIVE_COMPILATION_CONDITIONS" = "$(inherited)";
+				"PRODUCT_BUNDLE_IDENTIFIER" = "com.luolihao.newslive";
+				"SDKROOT" = "xros";
+				"XROS_DEPLOYMENT_TARGET" = "1.0";
+				"ASSETCATALOG_COMPILER_APPICON_NAME" = "AppIconVision";
+				"INFOPLIST_FILE" = "Config/Info-visionOS.plist";
+				"TARGETED_DEVICE_FAMILY" = "7";
+			};
+			"name" = "Release";
+		};
+		"C5465E158142F3DA83A9AD99" = {
+			"isa" = "XCConfigurationList";
+			"buildConfigurations" = ("DEB21EA6C2597A3A89BB57EC", "E7DCDEEFBBE76D8A8FA8B9A2");
+			"defaultConfigurationIsVisible" = "0";
+			"defaultConfigurationName" = "Release";
+		};
+		"AFDB64AA061E68A82469483D" = {
+			"isa" = "PBXFileReference";
+			"explicitFileType" = "wrapper.application";
+			"includeInIndex" = "0";
+			"path" = "NewsLive.app";
+			"sourceTree" = "BUILT_PRODUCTS_DIR";
+			"name" = "NewsLive-visionOS.app";
+		};
+		"65056063C7823E6CFD464963" = {
+			"isa" = "PBXNativeTarget";
+			"buildConfigurationList" = "C5465E158142F3DA83A9AD99";
+			"buildPhases" = ("0D9ECA5B3B5D03B1A651694A", "EFB5D6155FC5E8B42CE54D1A", "E03BD0FAB4CE263C09DEB65D", "BEF79FADD134459508FC1C31");
+			"buildRules" = ();
+			"dependencies" = ();
+			"name" = "NewsLive-visionOS";
+			"packageProductDependencies" = ("ED3DC570B697046E1D6DC405");
+			"productName" = "NewsLive";
+			"productReference" = "AFDB64AA061E68A82469483D";
+			"productType" = "com.apple.product-type.application";
+		};
 	};
-	rootObject = 244210E48437B6556980A702;
+	"rootObject" = "244210E48437B6556980A702";
 }

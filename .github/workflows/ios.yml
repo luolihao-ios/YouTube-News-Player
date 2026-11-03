@@ -1,4 +1,4 @@
-name: iOS 构建与核心测试
+name: 三平台构建与核心测试
 on:
   push:
     branches: [main]
@@ -11,38 +11,70 @@ permissions:
   contents: read
 
 jobs:
-  verify:
-    runs-on: macos-26
-    timeout-minutes: 20
+  static:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.platforms.outputs.matrix }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: 安全生成 CI 配置
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --target .test-tools -r requirements-dev.txt
+      - run: node --test tests/player.test.mjs
+      - run: python -m unittest discover -s tests -p 'test_*.py'
+      - run: python scripts/verify_project.py
+      - id: platforms
+        name: 从统一配置生成三平台矩阵
+        run: |
+          python - <<'PY'
+          import json,os,pathlib
+          config=json.loads(pathlib.Path('Config/platforms.json').read_text())
+          matrix={'include':[{'platform':key,'scheme':item['scheme'],'destination':item.get('simulator_destination',item['destination'])} for key,item in config.items()]}
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f: f.write('matrix='+json.dumps(matrix,separators=(',',':'))+'\n')
+          PY
+  build:
+    needs: static
+    runs-on: macos-26
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.static.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: 安全生成运行配置
         env:
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
         run: python3 scripts/configure_ci.py
-      - name: 播放器脚本测试
-        run: node --test tests/player.test.mjs
-      - name: 发佈配置单元测试
-        run: python3 -m unittest discover -s tests -p 'test_*.py'
-      - name: 安装静态检查依赖
-        run: python3 -m pip install --target .test-tools -r requirements-dev.txt
-      - name: Swift 语法与工程完整性
-        run: python3 scripts/verify_project.py
       - name: 核心 XCTest
+        if: matrix.platform == 'macos'
         run: swift test --package-path Packages/NewsCore
-      - name: 构建 iOS 模拟器 App
-        run: >-
-          xcodebuild -project NewsLive.xcodeproj
-          -scheme NewsLive -configuration Debug
-          -destination 'generic/platform=iOS Simulator'
-          -derivedDataPath DerivedData
-          CODE_SIGNING_ALLOWED=NO build
-      - name: 保存未签名的模拟器 App
-        uses: actions/upload-artifact@v4
+      - name: 编译对应平台原生 App
+        env:
+          SCHEME: ${{ matrix.scheme }}
+          DESTINATION: ${{ matrix.destination }}
+          PLATFORM: ${{ matrix.platform }}
+        run: |
+          set -euo pipefail
+          xcodebuild -project NewsLive.xcodeproj -scheme "$SCHEME" -configuration Debug \
+            -destination "$DESTINATION" -derivedDataPath "DerivedData-$PLATFORM" \
+            CODE_SIGNING_ALLOWED=NO build
+          python3 - <<'PY'
+          import os,pathlib,subprocess,plistlib
+          platform=os.environ['PLATFORM']
+          apps=list(pathlib.Path('DerivedData-'+platform+'/Build/Products').glob('Debug*/NewsLive.app'))
+          assert len(apps)==1,'未找到唯一实际 App 二进制'
+          info=plistlib.loads((apps[0]/'Info.plist').read_bytes())
+          assert info['CFBundleIdentifier']=='com.luolihao.newslive'
+          assert info['CFBundleDisplayName']=='YouTubeNewsLive'
+          output=pathlib.Path('build/binaries');output.mkdir(parents=True,exist_ok=True)
+          subprocess.run(['/usr/bin/ditto','-c','-k','--keepParent',str(apps[0]),str(output/('YouTubeNewsLive-'+platform+'-Debug.app.zip'))],check=True)
+          PY
+      - uses: actions/upload-artifact@v4
         with:
-          name: NewsLive-iOS-Simulator
-          path: DerivedData/Build/Products/Debug-iphonesimulator/NewsLive.app
+          name: YouTubeNewsLive-${{ matrix.platform }}-Debug
+          path: build/binaries/*.zip
           if-no-files-found: error

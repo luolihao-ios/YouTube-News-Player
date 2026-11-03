@@ -1,6 +1,13 @@
 import SwiftUI
 import WebKit
 import NewsCore
+#if os(macOS)
+import AppKit
+typealias NativePlayerRepresentable = NSViewRepresentable
+#else
+import UIKit
+typealias NativePlayerRepresentable = UIViewRepresentable
+#endif
 
 enum PlayerEvent {
     case ready, state(Int), failed(String)
@@ -9,26 +16,47 @@ enum PlayerEvent {
 @MainActor
 final class PlayerSession: ObservableObject {
     weak var webView: WKWebView?
+    private static weak var playingSession: PlayerSession?
     func pause() { webView?.evaluateJavaScript("window.NewsPlayer && window.NewsPlayer.pause()", completionHandler: nil) }
+    func claimPlayback() {
+        if Self.playingSession !== self { Self.playingSession?.pause() }
+        Self.playingSession = self
+    }
 }
 
-struct YouTubeWebView: UIViewRepresentable {
+struct YouTubeWebView: NativePlayerRepresentable {
     let videoID: String
     let session: PlayerSession
     let onEvent: (PlayerEvent) -> Void
 
-    func makeCoordinator() -> Coordinator { Coordinator(onEvent: onEvent) }
+    func makeCoordinator() -> Coordinator { Coordinator(session: session, onEvent: onEvent) }
+    #if os(macOS)
+    func makeNSView(context: Context) -> WKWebView { makeWebView(context: context) }
+    func updateNSView(_ nsView: WKWebView, context: Context) {}
+    static func dismantleNSView(_ nsView: WKWebView, coordinator: Coordinator) { dismantle(nsView, coordinator: coordinator) }
+    #else
     func makeUIView(context: Context) -> WKWebView {
+        makeWebView(context: context)
+    }
+    func updateUIView(_ uiView: WKWebView, context: Context) {}
+    static func dismantleUIView(_ uiView: WKWebView, coordinator: Coordinator) { dismantle(uiView, coordinator: coordinator) }
+    #endif
+
+    private func makeWebView(context: Context) -> WKWebView {
         let configuration = WKWebViewConfiguration()
+        #if !os(macOS)
         configuration.allowsInlineMediaPlayback = true
         configuration.allowsPictureInPictureMediaPlayback = false
         configuration.mediaTypesRequiringUserActionForPlayback = .all
+        #endif
         configuration.websiteDataStore = .nonPersistent()
         configuration.userContentController.add(context.coordinator, name: "youtube")
         let webView = WKWebView(frame: .zero, configuration: configuration)
+        #if !os(macOS)
         webView.isOpaque = false
         webView.backgroundColor = .black
         webView.scrollView.isScrollEnabled = false
+        #endif
         webView.navigationDelegate = context.coordinator
         webView.uiDelegate = context.coordinator
         session.webView = webView
@@ -45,8 +73,7 @@ struct YouTubeWebView: UIViewRepresentable {
         }
         return webView
     }
-    func updateUIView(_ uiView: WKWebView, context: Context) {}
-    static func dismantleUIView(_ uiView: WKWebView, coordinator: Coordinator) {
+    private static func dismantle(_ uiView: WKWebView, coordinator: Coordinator) {
         coordinator.timeout?.cancel()
         uiView.evaluateJavaScript("window.NewsPlayer && window.NewsPlayer.destroy()", completionHandler: nil)
         uiView.configuration.userContentController.removeScriptMessageHandler(forName: "youtube")
@@ -56,8 +83,9 @@ struct YouTubeWebView: UIViewRepresentable {
     @MainActor
     final class Coordinator: NSObject, WKScriptMessageHandler, WKNavigationDelegate, WKUIDelegate {
         let onEvent: (PlayerEvent) -> Void
+        weak var session: PlayerSession?
         var timeout: Task<Void, Never>?
-        init(onEvent: @escaping (PlayerEvent) -> Void) { self.onEvent = onEvent }
+        init(session: PlayerSession, onEvent: @escaping (PlayerEvent) -> Void) { self.session = session; self.onEvent = onEvent }
         func startTimeout() {
             timeout = Task { [weak self] in
                 do { try await Task.sleep(for: .seconds(25)) } catch { return }
@@ -70,7 +98,10 @@ struct YouTubeWebView: UIViewRepresentable {
             switch type {
             case "ready": timeout?.cancel(); onEvent(.ready)
             case "state":
-                if let state = body["state"] as? Int { onEvent(.state(state)) }
+                if let state = body["state"] as? Int {
+                    if state == 1 { session?.claimPlayback() }
+                    onEvent(.state(state))
+                }
             case "error":
                 timeout?.cancel()
                 let code = body["code"] as? Int ?? -1
@@ -93,15 +124,23 @@ struct YouTubeWebView: UIViewRepresentable {
         }
         func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
             if action.navigationType == .linkActivated, let url = action.request.url {
-                if url.scheme == "https" { UIApplication.shared.open(url) }
+                openExternal(url)
                 decisionHandler(.cancel); return
             }
             let scheme = action.request.url?.scheme
             decisionHandler(scheme == "https" || scheme == "about" ? .allow : .cancel)
         }
         func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for action: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
-            if let url = action.request.url, url.scheme == "https" { UIApplication.shared.open(url) }
+            if let url = action.request.url { openExternal(url) }
             return nil
+        }
+        private func openExternal(_ url: URL) {
+            guard url.scheme == "https" else { return }
+            #if os(macOS)
+            NSWorkspace.shared.open(url)
+            #else
+            UIApplication.shared.open(url)
+            #endif
         }
     }
 }
