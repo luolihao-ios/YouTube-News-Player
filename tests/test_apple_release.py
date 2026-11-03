@@ -29,11 +29,23 @@ class ReleaseTests(unittest.TestCase):
         with self.assertRaises(ValueError): release.validate_profile(valid,'macos',b'our-cert')
     def test_artifact_info_requires_name_bundle_and_runtime_config(self):
         release=self.load()
-        info={'CFBundleIdentifier':'com.luolihao.newslive','CFBundleVersion':'123','CFBundleDisplayName':'YouTubeNewsLive','YouTubeAPIKey':'configured',
+        info={'CFBundleIdentifier':'com.luolihao.newslive','CFBundleVersion':'123','CFBundleShortVersionString':'1.0','CFBundleDisplayName':'YouTubeNewsLive','YouTubeAPIKey':'configured',
               'AppStoreID':'789','ITSAppUsesNonExemptEncryption':False}
         with patch.dict(os.environ,{'BUILD_NUMBER':'123','APP_STORE_ID':'789'}):
-            release.validate_info(info)
-            with self.assertRaises(ValueError): release.validate_info({**info,'CFBundleDisplayName':'NewsLive'})
+            release.validate_info(info,'1.0')
+            with self.assertRaises(ValueError): release.validate_info({**info,'CFBundleDisplayName':'NewsLive'},'1.0')
+    def test_artifact_version_must_exactly_match_apple_marketing_version(self):
+        release=self.load()
+        info={'CFBundleIdentifier':'com.luolihao.newslive','CFBundleVersion':'123','CFBundleShortVersionString':'1.0','CFBundleDisplayName':'YouTubeNewsLive','YouTubeAPIKey':'configured','AppStoreID':'789','ITSAppUsesNonExemptEncryption':False}
+        with patch.dict(os.environ,{'BUILD_NUMBER':'123','APP_STORE_ID':'789'}):
+            release.validate_info(info,'1.0')
+            with self.assertRaises(ValueError): release.validate_info({**info,'CFBundleShortVersionString':'1.0.0'},'1.0')
+    def test_archive_uses_selected_draft_marketing_version_explicitly(self):
+        release=self.load()
+        command=release.archive_command('visionos',Path('archive'),'TEAM','profile','Apple Distribution','123','1.0')
+        self.assertIn('MARKETING_VERSION=1.0',command)
+        self.assertIn('CURRENT_PROJECT_VERSION=123',command)
+        self.assertIn('NewsLive-visionOS',command)
     def test_missing_mac_installer_prevents_any_commands(self):
         release=self.load()
         with patch.dict(os.environ,{'IOS_SIGNING_CERTIFICATE_BASE64':'x','IOS_SIGNING_CERTIFICATE_PASSWORD':'x'},clear=True),patch.object(release,'run') as run:

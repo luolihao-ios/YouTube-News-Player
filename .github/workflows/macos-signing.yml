@@ -1,0 +1,76 @@
+name: YouTubeNewsLive 一次性 Mac 安装器证书准备
+
+on:
+  workflow_dispatch:
+    inputs:
+      create:
+        description: 显式创建新安装器证书；默认仅列出公开证书信息
+        type: boolean
+        required: true
+        default: false
+      public_key:
+        description: 目标仓库 Actions Secrets 的公开 key（非私钥）；也可配置同名 vars
+        type: string
+        required: false
+      key_id:
+        description: 目标仓库 Actions Secrets 的公开 key_id；也可配置同名 vars
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: youtubenewslive-app-store
+  cancel-in-progress: false
+
+jobs:
+  bootstrap:
+    if: github.repository == 'luolihao-ios/YouTube-News-Player'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: 已配置的签名资料不重复签发
+        id: existing
+        env:
+          EXISTING_INSTALLER_P12: ${{ secrets.MAC_INSTALLER_P12_BASE64 }}
+          EXISTING_INSTALLER_PASSWORD: ${{ secrets.MAC_INSTALLER_P12_PASSWORD }}
+        shell: bash
+        run: |
+          if [[ -n "$EXISTING_INSTALLER_P12" && -n "$EXISTING_INSTALLER_PASSWORD" ]]; then
+            echo 'configured=true' >> "$GITHUB_OUTPUT"
+            echo '安装器两个 Secrets 已配置，跳过证书准备，未创建证书。' >> "$GITHUB_STEP_SUMMARY"
+          elif [[ -n "$EXISTING_INSTALLER_P12" || -n "$EXISTING_INSTALLER_PASSWORD" ]]; then
+            echo '安装器 Secrets 只有一个，停止自动创建，请先人工核对已有签名资料。'
+            exit 1
+          else
+            echo 'configured=false' >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-python@v5
+        if: steps.existing.outputs.configured == 'false'
+        with:
+          python-version: '3.12'
+      - name: 安装仅用于 Apple API 与密文封装的依赖
+        if: steps.existing.outputs.configured == 'false'
+        run: python -m pip install 'PyJWT[crypto]==2.10.1' 'PyNaCl==1.6.0'
+      - name: 只读检查或显式签发一次
+        if: steps.existing.outputs.configured == 'false'
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+          GITHUB_SECRET_PUBLIC_KEY: ${{ inputs.public_key || vars.GITHUB_SECRET_PUBLIC_KEY }}
+          GITHUB_SECRET_KEY_ID: ${{ inputs.key_id || vars.GITHUB_SECRET_KEY_ID }}
+          CREATE_INSTALLER: ${{ inputs.create }}
+        run: python scripts/bootstrap_mac_installer.py --create "$CREATE_INSTALLER"
+      - name: 仅保留密文和公开证书 ID、有效期报告
+        if: always() && steps.existing.outputs.configured == 'false'
+        uses: actions/upload-artifact@v4
+        with:
+          name: YouTubeNewsLive-Mac-Installer-Sealed
+          path: |
+            build/mac-installer-bootstrap/sealed-secrets.json
+            build/mac-installer-bootstrap/report.json
+          if-no-files-found: ignore
+          retention-days: 1

@@ -45,9 +45,17 @@ def validate_profile(profile,platform,certificate):
     if entitlements.get('get-task-allow') or entitlements.get('com.apple.security.get-task-allow'): raise ValueError('拒绝调试描述文件用于发行')
     return teams[0]
 
-def validate_info(info):
+def archive_command(platform, archive, team, profile, identity, build_number, marketing_version):
+    config=store.platforms()[platform]
+    return ['xcodebuild','archive','-project','NewsLive.xcodeproj','-scheme',config['scheme'],'-configuration','Release',
+            '-destination',config['destination'],'-archivePath',archive,'DEVELOPMENT_TEAM='+team,'CODE_SIGN_STYLE=Manual',
+            'CODE_SIGN_IDENTITY='+identity,'PROVISIONING_PROFILE_SPECIFIER='+profile,'CURRENT_PROJECT_VERSION='+build_number,
+            'MARKETING_VERSION='+marketing_version]
+
+def validate_info(info, marketing_version):
     expected={'CFBundleIdentifier':store.BUNDLE,'CFBundleVersion':os.environ['BUILD_NUMBER'],
-              'CFBundleDisplayName':'YouTubeNewsLive','AppStoreID':os.environ['APP_STORE_ID'],'ITSAppUsesNonExemptEncryption':False}
+              'CFBundleDisplayName':'YouTubeNewsLive','AppStoreID':os.environ['APP_STORE_ID'],'ITSAppUsesNonExemptEncryption':False,
+              'CFBundleShortVersionString':marketing_version}
     if any(info.get(key)!=value for key,value in expected.items()): raise ValueError('成品名称、身份、版本或运行配置不匹配')
     key=info.get('YouTubeAPIKey','')
     if not key or '$(' in key: raise ValueError('成品缺少 YouTube 配置')
@@ -74,6 +82,12 @@ def release(platform):
         cert_path.write_bytes(base64.b64decode(os.environ['IOS_SIGNING_CERTIFICATE_BASE64'],validate=True))
         cert_path.chmod(0o600); os.environ['SIGNING_CERTIFICATE_PATH']=str(cert_path)
         api=store.AppleAPI()
+        app=store.find_app(api)
+        if not app or app['id']!=os.environ['APP_STORE_ID']:
+            raise ValueError('发布 App ID 与本 Bundle 实际记录不匹配')
+        version=store.select_editable_version(api.all(f"apps/{app['id']}/appStoreVersions?limit=200"),platform)
+        marketing_version=version['attributes']['versionString']
+        print('本平台 Apple 草稿版本: '+marketing_version)
         cert_der=store.certificate_der(cert_path,'IOS_SIGNING_CERTIFICATE_PASSWORD')
         certificate=store.match_certificate(api,cert_der,store.certificate_types(platform))
         identity='Apple Distribution' if certificate['attributes']['certificateType']=='DISTRIBUTION' else '3rd Party Mac Developer Application' if platform=='macos' else 'iPhone Distribution'
@@ -100,9 +114,7 @@ def release(platform):
         run(['security','set-key-partition-list','-S','apple-tool:,apple:,codesign:','-s','-k',keychain_password,keychain],sensitive=True)
         run(['security','list-keychains','-d','user','-s',keychain,*original_keychains])
         archive=temp/'YouTubeNewsLive.xcarchive'
-        run(['xcodebuild','archive','-project','NewsLive.xcodeproj','-scheme',config['scheme'],'-configuration','Release',
-             '-destination',config['destination'],'-archivePath',archive,'DEVELOPMENT_TEAM='+team,'CODE_SIGN_STYLE=Manual',
-             'CODE_SIGN_IDENTITY='+identity,'PROVISIONING_PROFILE_SPECIFIER='+profile['Name'],'CURRENT_PROJECT_VERSION='+os.environ['BUILD_NUMBER']])
+        run(archive_command(platform,archive,team,profile['Name'],identity,os.environ['BUILD_NUMBER'],marketing_version))
         options=export_options(platform,team,profile['Name']); options['signingCertificate']=identity
         options_path=temp/'ExportOptions.plist'; options_path.write_bytes(plistlib.dumps(options))
         run(['xcodebuild','-exportArchive','-archivePath',archive,'-exportPath',destination,'-exportOptionsPlist',options_path])
@@ -113,14 +125,14 @@ def release(platform):
         if platform=='macos':
             apps=list((archive/'Products/Applications').glob('*.app'))
             if len(apps)!=1: raise ValueError('归档不存在唯一 Mac App')
-            validate_info(plistlib.loads((apps[0]/'Contents/Info.plist').read_bytes()))
+            validate_info(plistlib.loads((apps[0]/'Contents/Info.plist').read_bytes()),marketing_version)
             run(['codesign','--verify','--deep','--strict',apps[0]])
             run(['pkgutil','--check-signature',artifact])
         else:
             with zipfile.ZipFile(artifact) as ipa:
                 files=[name for name in ipa.namelist() if name.startswith('Payload/') and name.endswith('.app/Info.plist') and name.count('/')==2]
                 if len(files)!=1: raise ValueError('IPA 中没有唯一主 App')
-                validate_info(plistlib.loads(ipa.read(files[0])))
+                validate_info(plistlib.loads(ipa.read(files[0])),marketing_version)
         key_path.parent.mkdir(parents=True,exist_ok=True)
         key_path.write_bytes(base64.b64decode(os.environ['APP_STORE_CONNECT_API_KEY_BASE64'],validate=True)); key_path.chmod(0o600)
         # Xcode 从归档平台判断上传类型，避免把 visionOS 当作 iOS 或猜测 altool 平台参数。
@@ -128,7 +140,7 @@ def release(platform):
         run(['xcodebuild','-exportArchive','-archivePath',archive,'-exportOptionsPlist',options_path,
              '-authenticationKeyPath',key_path,'-authenticationKeyID',os.environ['APP_STORE_CONNECT_API_KEY_ID'],
              '-authenticationKeyIssuerID',os.environ['APP_STORE_CONNECT_ISSUER_ID']])
-        store.report('upload-'+platform,{'platform':platform,'build_number':os.environ['BUILD_NUMBER'],'app_id':os.environ['APP_STORE_ID'],
+        store.report('upload-'+platform,{'platform':platform,'build_number':os.environ['BUILD_NUMBER'],'marketing_version':marketing_version,'app_store_version_id':version['id'],'app_id':os.environ['APP_STORE_ID'],
                                        'artifact':str(artifact.relative_to(ROOT)),'upload_command_succeeded':True,'apple_processing_state':'需另行 inspect 回读'})
         print('上传命令成功；Apple 处理状态与 TestFlight 可用性尚待独立回读。')
     finally:

@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -142,6 +143,16 @@ def state(item):
     attrs = item['attributes']
     return attrs.get('appVersionState') or attrs.get('state') or attrs.get('appStoreState')
 
+def select_editable_version(versions, platform):
+    """从 API 实际版本中选择所需平台唯一可编辑草稿，拒绝替代平台与无效版本。"""
+    selected_platforms([platform])
+    matches = [item for item in versions if item['attributes'].get('platform') == platforms()[platform]['apple_platform'] and state(item) in EDITABLE]
+    if len(matches) != 1: raise ValueError('没有唯一可编辑的平台草稿: ' + platform)
+    version = matches[0]['attributes'].get('versionString', '')
+    if not isinstance(version, str) or not re.fullmatch(r'[0-9]+(?:\.[0-9]+){0,2}', version):
+        raise ValueError('Apple 草稿版本无效: ' + platform)
+    return matches[0]
+
 def version_labels(platform, locale):
     device = platforms()[platform]['name']
     if locale == 'en-US':
@@ -191,9 +202,7 @@ def metadata(api, requested=None):
     targets = {}
     # 全部预检成功后才开始写入，避免误改其他平台或遇到缺失草稿后部分写入。
     for platform in chosen:
-        matches = [item for item in versions if item['attributes']['platform']==platforms()[platform]['apple_platform'] and state(item) in EDITABLE]
-        if len(matches)!=1: raise ValueError('没有唯一可编辑的平台草稿: '+platform)
-        targets[platform] = matches[0]
+        targets[platform] = select_editable_version(versions, platform)
     for values in LABELS.values():
         if any(not value or len(value)>30 for value in values.values()): raise ValueError('名称/副标题超过 Apple 30 字符限制')
     result = {'app_id':app['id'],'platforms':chosen,'shared_app_info':infos[0]['id'], 'versions':{}}

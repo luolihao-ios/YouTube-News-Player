@@ -18,40 +18,43 @@ struct DesktopPlayerView: View {
     var body: some View {
         NavigationStack {
             GeometryReader { geometry in
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 22) {
-                        playbackArea
-                            .frame(minWidth: 200, maxWidth: .infinity)
-                            .frame(height: max(220, min((geometry.size.width - 48) * 9 / 16, 460)))
-                            .background(.black, in: RoundedRectangle(cornerRadius: 16))
-                            .clipShape(RoundedRectangle(cornerRadius: 16))
-                        channelInfo
-                        if let error = playerError ?? store.errors[channel.id] {
-                            VStack(alignment: .leading, spacing: 10) {
-                                Label(error, systemImage: "exclamationmark.triangle").font(.subheadline).foregroundStyle(.secondary)
-                                HStack {
-                                    Button("重新載入") { retry() }.buttonStyle(.bordered)
-                                    Link("在 YouTube 開啟", destination: video?.watchURL ?? channel.channelURL)
-                                }
-                            }.padding(16).frame(maxWidth: .infinity, alignment: .leading)
-                                .background(Color.newsSurface, in: RoundedRectangle(cornerRadius: 13))
-                        }
-                        HStack(spacing: 14) {
-                            Button { store.toggleFavorite(channel) } label: {
-                                Label(store.isFavorite(channel) ? "已收藏" : "加入收藏", systemImage: store.isFavorite(channel) ? "heart.fill" : "heart")
-                            }.tint(store.isFavorite(channel) ? Color.newsRed : Color.accentColor)
-                            ShareLink(item: video?.watchURL ?? channel.channelURL) { Label("分享", systemImage: "square.and.arrow.up") }
-                            Button { retry() } label: { Label("更新直播", systemImage: "arrow.clockwise") }
-                                .disabled(store.loading.contains(channel.id))
-                            Spacer()
-                        }.buttonStyle(.bordered)
-                        Picker("頻道詳情", selection: $detailTab) {
-                            Text("直播資訊").tag(0)
-                            Text("頻道簡介").tag(1)
-                            Text("相關頻道").tag(2)
-                        }.pickerStyle(.segmented)
-                        details
-                    }.padding(24)
+                VStack(spacing: 0) {
+                    // 播放器固定可见；详情滚动不会将正在播放的画面移出窗口。
+                    playbackArea
+                        .frame(minWidth: 200, maxWidth: .infinity)
+                        .frame(height: max(200, min(geometry.size.width * 9 / 16, min(geometry.size.height * 0.55, 460))))
+                        .background(.black)
+                        .layoutPriority(1)
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 22) {
+                            channelInfo
+                            if let error = playerError ?? store.errors[channel.id] {
+                                VStack(alignment: .leading, spacing: 10) {
+                                    Label(error, systemImage: "exclamationmark.triangle").font(.subheadline).foregroundStyle(.secondary)
+                                    HStack {
+                                        Button("重新載入") { retry() }.buttonStyle(.bordered)
+                                        Link("在 YouTube 開啟", destination: video?.watchURL ?? channel.channelURL)
+                                    }
+                                }.padding(16).frame(maxWidth: .infinity, alignment: .leading)
+                                    .background(Color.newsSurface, in: RoundedRectangle(cornerRadius: 13))
+                            }
+                            HStack(spacing: 14) {
+                                Button { store.toggleFavorite(channel) } label: {
+                                    Label(store.isFavorite(channel) ? "已收藏" : "加入收藏", systemImage: store.isFavorite(channel) ? "heart.fill" : "heart")
+                                }.tint(store.isFavorite(channel) ? Color.newsRed : Color.accentColor)
+                                ShareLink(item: video?.watchURL ?? channel.channelURL) { Label("分享", systemImage: "square.and.arrow.up") }
+                                Button { retry() } label: { Label("更新直播", systemImage: "arrow.clockwise") }
+                                    .disabled(store.loading.contains(channel.id))
+                                Spacer()
+                            }.buttonStyle(.bordered)
+                            Picker("頻道詳情", selection: $detailTab) {
+                                Text("直播資訊").tag(0)
+                                Text("頻道簡介").tag(1)
+                                Text("相關頻道").tag(2)
+                            }.pickerStyle(.segmented)
+                            details
+                        }.padding(24)
+                    }
                 }
             }
             .background(Color.newsBackground)

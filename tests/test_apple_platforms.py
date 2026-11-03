@@ -121,6 +121,18 @@ class PlatformStoreTests(unittest.TestCase):
             destination=Path(folder)/'test.profile'
             with self.assertRaises(ValueError): store.provision(api,str(destination),'ios')
             self.assertFalse(destination.exists())
+    def test_marketing_version_comes_from_selected_platform_editable_draft(self):
+        api=StoreAPI()
+        api.versions[0]['attributes']['versionString']='1.0'
+        api.versions[1]['attributes']['versionString']='2.3'
+        api.versions.append({'id':'released-ios','attributes':{'platform':'IOS','versionString':'0.9','appStoreState':'READY_FOR_SALE'}})
+        self.assertEqual(store.select_editable_version(api.versions,'ios')['attributes']['versionString'],'1.0')
+        self.assertEqual(store.select_editable_version(api.versions,'macos')['attributes']['versionString'],'2.3')
+    def test_marketing_version_selection_rejects_missing_duplicate_or_invalid_drafts(self):
+        for versions in [[],[{'id':'a','attributes':{'platform':'IOS','versionString':'1.0','appStoreState':'READY_FOR_SALE'}}],
+                         [{'id':key,'attributes':{'platform':'IOS','versionString':'1.0','appStoreState':'PREPARE_FOR_SUBMISSION'}} for key in ['a','b']],
+                         [{'id':'a','attributes':{'platform':'IOS','versionString':'1.0;bad','appStoreState':'PREPARE_FOR_SUBMISSION'}}]]:
+            with self.subTest(versions=versions),self.assertRaises(ValueError): store.select_editable_version(versions,'ios')
     def test_tvos_is_not_an_allowed_platform(self):
         with self.assertRaises(ValueError): store.selected_platforms(['tvos'])
     def test_certificate_matching_requires_unexpired_exact_der(self):

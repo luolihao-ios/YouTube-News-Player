@@ -67,7 +67,8 @@ jobs:
           platform=os.environ['PLATFORM']
           apps=list(pathlib.Path('DerivedData-'+platform+'/Build/Products').glob('Debug*/NewsLive.app'))
           assert len(apps)==1,'未找到唯一实际 App 二进制'
-          info=plistlib.loads((apps[0]/'Info.plist').read_bytes())
+          plist=apps[0]/('Contents/Info.plist' if platform=='macos' else 'Info.plist')
+          info=plistlib.loads(plist.read_bytes())
           assert info['CFBundleIdentifier']=='com.luolihao.newslive'
           assert info['CFBundleDisplayName']=='YouTubeNewsLive'
           output=pathlib.Path('build/binaries');output.mkdir(parents=True,exist_ok=True)
