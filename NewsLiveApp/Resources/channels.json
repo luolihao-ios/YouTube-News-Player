@@ -1,0 +1,14 @@
+[
+  {"id":"TVBSNEWS01","name":"TVBS 新聞台","subtitle":"即時新聞・掌握新聞脈動","category":"台灣新聞","monogram":"TVBS","color":"203DA7","youtubeChannelID":"UC5nwNW4KdC0SzrhF9BXEYOQ"},
+  {"id":"setnews","name":"三立新聞網","subtitle":"新聞現場・多元報導","category":"台灣新聞","monogram":"SET","color":"134495","youtubeChannelID":"UCIU8ha-NHmLjtUwU7dFiXUA"},
+  {"id":"CtiTv","name":"中天電視","subtitle":"時事焦點・新聞直播","category":"台灣新聞","monogram":"中天","color":"0871BE","youtubeChannelID":"UC5l1Yto5oOIgRXlI4p4VKbw"},
+  {"id":"newsebc","name":"東森新聞","subtitle":"新聞追蹤・即時現場","category":"台灣新聞","monogram":"EBC","color":"E6A500","youtubeChannelID":"UCR3asjvr_WAaxwJYEDV_Bfw"},
+  {"id":"FTV_News","name":"民視新聞","subtitle":"在地觀點・焦點新聞","category":"台灣新聞","monogram":"民視","color":"2933A3","youtubeChannelID":"UC2VmWn8dAqkzlQqvy02E1PA"},
+  {"id":"TTV_NEWS","name":"台視新聞","subtitle":"新聞現場・焦點話題","category":"台灣新聞","monogram":"台視","color":"1768BC","youtubeChannelID":"UC8ROUUjHzEQm-ndb69CX8Ww"},
+  {"id":"SkyNews","name":"Sky News","subtitle":"英語新聞・全球視野","category":"國際新聞","monogram":"sky","color":"C41726","youtubeChannelID":"UCoMdktPbSTixAyNGwb-UYkQ"},
+  {"id":"DWNews","name":"DW News","subtitle":"德國之聲・國際現場","category":"國際新聞","monogram":"DW","color":"00788B","youtubeChannelID":"UCknLrEdhRCp1aegoMqRaCZg"},
+  {"id":"FRANCE24_English","name":"FRANCE 24 English","subtitle":"法國視角・英語新聞","category":"國際新聞","monogram":"F24","color":"009ADE","youtubeChannelID":"UCQfwfsi5VrQ8yKZ-UWmAEFg"},
+  {"id":"BloombergTV","name":"Bloomberg Television","subtitle":"全球市場・商業新聞","category":"財經","monogram":"B","color":"202026","youtubeChannelID":"UCIALMKvObZNtJ6AmdCLP7Lg"},
+  {"id":"ustv","name":"非凡電視","subtitle":"市場趨勢・財經焦點","category":"財經","monogram":"非凡","color":"CC1924","youtubeChannelID":"UCYIVkruUoN04UjV9pkBTswg"},
+  {"id":"CNA938","name":"CNA938","subtitle":"亞洲視野・時事與生活","category":"綜合","monogram":"CNA","color":"B42030","youtubeChannelID":"UCOmQCqTPWfY-vL7mmRVCvkg"}
+]

@@ -1,0 +1,12 @@
+.DS_Store
+Config/Local.xcconfig
+**/.build/
+**/.swiftpm/
+DerivedData/
+build/
+*.xcuserstate
+xcuserdata/
+__pycache__/
+*.pyc
+.test-output/
+.test-tools/

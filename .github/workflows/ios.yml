@@ -1,0 +1,48 @@
+name: iOS 构建与核心测试
+on:
+  push:
+    branches: [main]
+    paths: ['NewsLiveApp/**', 'Packages/**', 'Config/**', 'scripts/**', 'tests/**', 'NewsLive.xcodeproj/**', '.github/workflows/**', 'requirements-dev.txt']
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: macos-26
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: 安全生成 CI 配置
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+        run: python3 scripts/configure_ci.py
+      - name: 播放器脚本测试
+        run: node --test tests/player.test.mjs
+      - name: 发佈配置单元测试
+        run: python3 -m unittest discover -s tests -p 'test_*.py'
+      - name: 安装静态检查依赖
+        run: python3 -m pip install --target .test-tools -r requirements-dev.txt
+      - name: Swift 语法与工程完整性
+        run: python3 scripts/verify_project.py
+      - name: 核心 XCTest
+        run: swift test --package-path Packages/NewsCore
+      - name: 构建 iOS 模拟器 App
+        run: >-
+          xcodebuild -project NewsLive.xcodeproj
+          -scheme NewsLive -configuration Debug
+          -destination 'generic/platform=iOS Simulator'
+          -derivedDataPath DerivedData
+          CODE_SIGNING_ALLOWED=NO build
+      - name: 保存未签名的模拟器 App
+        uses: actions/upload-artifact@v4
+        with:
+          name: NewsLive-iOS-Simulator
+          path: DerivedData/Build/Products/Debug-iphonesimulator/NewsLive.app
+          if-no-files-found: error

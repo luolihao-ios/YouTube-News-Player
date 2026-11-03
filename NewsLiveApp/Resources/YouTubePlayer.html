@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <style>html,body{margin:0;width:100%;height:100%;background:#000;overflow:hidden}#player{width:100%;height:100%;min-width:200px;min-height:200px}</style>
+</head>
+<body>
+<div id="player"></div>
+<script>
+'use strict';
+const configuration = __PLAYER_CONFIGURATION__;
+let player = null;
+function send(message) {
+  if (window.webkit && window.webkit.messageHandlers.youtube) {
+    window.webkit.messageHandlers.youtube.postMessage(message);
+  }
+}
+function onYouTubeIframeAPIReady() {
+  if (!/^[A-Za-z0-9_-]{11}$/.test(configuration.videoID)) {
+    send({type:'error',code:2}); return;
+  }
+  player = new YT.Player('player', {
+    width:'100%', height:'100%', videoId:configuration.videoID,
+    playerVars:{playsinline:1,controls:1,autoplay:0,fs:1,origin:configuration.origin},
+    events:{
+      onReady:()=>send({type:'ready'}),
+      onError:event=>send({type:'error',code:Number(event.data)}),
+      onStateChange:event=>send({type:'state',state:Number(event.data)}),
+      onAutoplayBlocked:()=>send({type:'autoplayBlocked'})
+    }
+  });
+}
+window.NewsPlayer = {
+  pause:()=>{ if(player && player.pauseVideo) player.pauseVideo(); },
+  destroy:()=>{
+    if(player){ if(player.pauseVideo) player.pauseVideo(); if(player.destroy) player.destroy(); player=null; }
+  }
+};
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden) window.NewsPlayer.pause();
+});
+</script>
+<script src="https://www.youtube.com/iframe_api"></script>
+</body>
+</html>

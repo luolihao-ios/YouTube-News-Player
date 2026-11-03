@@ -1,0 +1,9 @@
+// 複製為 Local.xcconfig，該檔不應提交版本控制。
+// 在 Google Cloud 啟用 YouTube Data API v3，將 Key 限制為該 API 和實際 iOS Bundle ID。
+PRODUCT_BUNDLE_IDENTIFIER = your.registered.bundleid
+DEVELOPMENT_TEAM = YOUR_TEAM_ID
+YOUTUBE_API_KEY = YOUR_YOUTUBE_API_KEY
+APP_STORE_ID = YOUR_NUMERIC_APP_STORE_ID
+// xcconfig 的 // 會變成註解，網址須使用下列空變數寫法。
+PRIVACY_POLICY_URL = https:/$()/your-domain.com/privacy
+SUPPORT_URL = https:/$()/your-domain.com/support

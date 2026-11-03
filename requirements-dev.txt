@@ -1,0 +1,4 @@
+# 仅用于源码静态检查，不参与 App 运行。
+tree-sitter==0.26.0
+tree-sitter-swift==0.7.4
+openstep-parser==2.0.3
