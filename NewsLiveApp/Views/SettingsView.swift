@@ -53,7 +53,7 @@ struct SettingsView: View {
                         }
                     } else { LabeledContent("版本", value: "\(AppConfiguration.version)・尚未上架") }
                 }
-                #if DEBUG
+                #if DEBUG && !STORE_SCREENSHOTS
                 Section("開發設定（僅 Debug）") {
                     SecureField("YouTube Data API Key", text: $debugKey).autocorrectionDisabled().textInputAutocapitalization(.never)
                     Button(keySaved ? "已儲存，點擊可再次更新" : "儲存並連線") {
@@ -71,7 +71,7 @@ struct SettingsView: View {
                 }
             }.navigationTitle("設定")
             .onAppear {
-                #if DEBUG
+                #if DEBUG && !STORE_SCREENSHOTS
                 debugKey = UserDefaults.standard.string(forKey: "debugAPIKey") ?? ""
                 #endif
                 Task { await updates.checkOnSettingsOpen() }
@@ -80,7 +80,7 @@ struct SettingsView: View {
                 Button("清除所有本機資料", role: .destructive) {
                     for channel in store.favoriteChannels { store.toggleFavorite(channel) }
                     store.clearHistory(); store.clearCache(); historyEnabled = false; playerConsent = false
-                    #if DEBUG
+                    #if DEBUG && !STORE_SCREENSHOTS
                     UserDefaults.standard.removeObject(forKey: "debugAPIKey"); debugKey = ""; keySaved = false
                     #endif
                 }

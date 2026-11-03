@@ -1,6 +1,8 @@
-# 新闻直播 · iOS
+# YouTubeNewsLive · iOS、macOS、visionOS
 
-以提供的四屏红白 UI 为基准构建的原生新闻直播聚合器。**SwiftUI + WKWebView + YouTube IFrame Player API + YouTube Data API v3**，最低 iOS 17，建议 Xcode 16.2 或以上。
+以提供的四屏红白 UI 为基准构建的原生新闻直播聚合器。**同一套工程、共享核心代码、三个原生目标**，共用同一个 App Store Connect 记录与 Bundle ID。采用 SwiftUI + WKWebView + YouTube IFrame Player API + YouTube Data API v3；最低 iOS 17、macOS 14、visionOS 1，建议 Xcode 26 或以上。tvOS 已按用户最新要求取消开发与打包。
+
+iOS 使用原生手机/平板界面；macOS 和 visionOS 共用侧栏、可搜索频道网格和大屏布局。WebKit 在 Mac 上使用 AppKit，在 iPhone/iPad/Vision Pro 上使用 UIKit 接口；业务代码与官方播放器页面共用。
 
 ## 现有功能
 
@@ -14,12 +16,12 @@
 
 ## 在 Mac 运行
 
-1. 将整个目录复制到 Mac，双击 `NewsLive.xcodeproj`，选择 `NewsLive` Scheme。
+1. 将整个目录复制到 Mac，双击 `NewsLive.xcodeproj`。iOS 选择 `NewsLive`，Mac 选择 `NewsLive-macOS`，Vision Pro 选择 `NewsLive-visionOS` Scheme。
 2. 将 `Config/Local.xcconfig.example` 复制为 `Config/Local.xcconfig`，配置自己的 Bundle ID、签名 Team 和 YouTube API Key。
 3. Google Cloud 项目启用 **YouTube Data API v3**，将 Key 限制为该 API，并按实际 Bundle ID 设置 iOS 应用限制。App 的 API 请求包含 `X-Ios-Bundle-Identifier`。
 4. 选择模拟器或 iPhone，运行 Debug。Debug 的设置页也能临时输入 Key，正式版没有这个输入项。
 
-工程没有依赖第三方播放 SDK，也不需要 CocoaPods / XcodeGen。修改新增文件后可运行 `python3 scripts/generate_project.py` 更新工程。
+工程没有依赖第三方播放 SDK，也不需要 CocoaPods / XcodeGen。工程与图标已经生成并提交；修改新增文件后，先安装 `requirements-dev.txt` 中的开发依赖到 `.test-tools`，再运行 `python3 scripts/generate_project.py` 更新工程。平台配置集中在 `Config/platforms.json`。
 
 缺少 Key 时仍能浏览目录、分类和管理收藏，界面会明确说明服务尚未设置；**不会用假直播、假观看人数替代 API 结果**。2026-11-03 已使用本地配置完成真实 HTTP API 验证：12 个频道身份均成功返回，首页 3 个频道的直播发现和详情均成功。iOS 真机播放仍未验证。
 
@@ -70,10 +72,13 @@ API 验证报告写入 `.test-output/youtube-api-check.json`，不包含 Key 或
 ## GitHub 与 App Store Connect
 
 - 仓库为私有。组织为 GitHub Free，私有仓库使用仓库级 Secrets：`YOUTUBE_API_KEY`、`APP_STORE_CONNECT_API_KEY_ID`、`APP_STORE_CONNECT_ISSUER_ID`、`APP_STORE_CONNECT_API_KEY_BASE64`、`IOS_SIGNING_CERTIFICATE_BASE64`、`IOS_SIGNING_CERTIFICATE_PASSWORD`。
-- `.github/workflows/ios.yml` 在 push/PR 执行本地测试、Swift XCTest、iOS 模拟器构建。可信工作流从 Secret 生成忽略提交的 `Config/Local.xcconfig`。
-- `.github/workflows/ios-testflight.yml` 可手动选择 `prepare` 或 `release`。准备流程注册/核对 `com.luolihao.newslive`，匹配真实 App Store App ID；签名流程根据发行证书和新 Bundle ID 获取专属描述文件，不复用其他 App 的描述文件。
-- 若已有匹配应用记录，准备流程填写并回读三语言名称、副标题。英文名 NewsLive，中文名 NewsLive 新闻直播/新聞直播；副标题“即时新闻，掌握世界每一刻”及繁体对应版本。
-- Apple 官方 API 不支持新建 App Store 应用记录。若尚无记录，工作流报告下一步，跳过签名上传。需要在 App Store Connect 新建 `NewsLive`，Bundle ID 选择 `com.luolihao.newslive`，SKU 可用 `newslive-ios`，主语言为 English (U.S.)，之后再次运行 `release`。
+- `.github/workflows/ios.yml` 在 push/PR 执行脚本测试、Swift XCTest、iOS/macOS/visionOS 三平台构建，输出实际 App 二进制的 ZIP。可信工作流从 Secret 生成忽略提交的 `Config/Local.xcconfig`。
+- `.github/workflows/ios-testflight.yml` 支持只读 `inspect/prepare`、写入文字资料 `metadata`、签名上传 `release`；可选 `ios/macos/visionos/all`。签名流程根据实际平台、发行证书和 Bundle ID 获取专属描述文件，上传 IPA 或 Mac PKG。
+- 已确认实际 App ID `6830361548`，Bundle 平台 `UNIVERSAL`。商店名统一 `YouTubeNewsLive`，三个平台均已写入并回读英文、简体中文、繁体中文的标题、副标题、说明、关键词和宣传文字。
+- App Store Connect 记录及三个 1.0 草稿已由用户创建。每个平台归档时动态读取其唯一可编辑草稿版本，成品必须匹配该营销版本与实际 App ID。
+- Mac 安装包另需 `MAC_INSTALLER_P12_BASE64/PASSWORD`；已通过一次性工作流签发专用 Installer 证书，将 P12 与密码用仓库公钥加密写入 Secrets，私钥没有下载到本机。
+- `.github/workflows/screenshots.yml` 在真实模拟器或 Mac 窗口采集三个语言的首页、频道、收藏、设置，保存原图和来源哈希；选择 `capture-upload` 后追加到对应平台草稿，并核对 Apple 完成状态和截图顺序。
+- 发布流程会等待本次确切构建在 Apple 处理为有效后，将其关联到对应平台草稿并回读；旧流程已上传的构建可通过 `attach-builds.yml` 输入实际构建号关联，无需重新打包。
 - 已配置的 GitHub Secret 不能读回明文。本次组织凭据使用目标仓库公钥加密同步为仓库级凭据；加密任务不输出或下载明文，临时源分支已清理，源项目主分支没有改动。
 - 工作流上传命令成功与 Apple 最终处理完成是两个状态。请以实际工作流日志和 App Store Connect 构建状态为准；本流程不提交审核或发布商店版本。
 

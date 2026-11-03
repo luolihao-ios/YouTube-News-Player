@@ -1,0 +1,125 @@
+name: YouTubeNewsLive 关联已上传构建
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_number:
+        description: 本次实际上传的数字构建号，不会自动选择其他构建
+        required: true
+        type: string
+      release_run_id:
+        description: 可选；先等待同仓库 ios-testflight.yml 的确切运行结束，再开始 Apple 处理轮询
+        required: false
+        type: string
+      platform:
+        description: 关联所选平台的可编辑商店草稿，all 不含 tvOS
+        type: choice
+        default: all
+        options: [all, ios, macos, visionos]
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: youtubenewslive-build-attachment
+  cancel-in-progress: false
+
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    outputs:
+      app_id: ${{ steps.identity.outputs.app_id }}
+      platforms: ${{ steps.identity.outputs.platforms }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+    steps:
+      - name: 可选等待同仓库确切发布运行结束
+        if: inputs.release_run_id != ''
+        env:
+          RELEASE_RUN_ID: ${{ inputs.release_run_id }}
+        run: |
+          python - <<'PY'
+          import json,os,re,subprocess
+          release_run_id=os.environ['RELEASE_RUN_ID']
+          repository=os.environ['GITHUB_REPOSITORY']
+          if not re.fullmatch(r'[0-9]+',release_run_id):
+              raise SystemExit('release_run_id 必须是明确的数字运行 ID')
+          def get(path):
+              return json.loads(subprocess.check_output(['gh','api',path],text=True))
+          path=f'repos/{repository}/actions/runs/{release_run_id}'
+          run=get(path)
+          if run.get('repository',{}).get('full_name')!=repository:
+              raise SystemExit('运行不属于当前仓库，停止等待')
+          workflow_id=run.get('workflow_id')
+          if not isinstance(workflow_id,int): raise SystemExit('无法确认发布工作流身份')
+          workflow=get(f'repos/{repository}/actions/workflows/{workflow_id}')
+          if workflow.get('path')!='.github/workflows/ios-testflight.yml':
+              raise SystemExit('目标运行不是 ios-testflight.yml，停止等待')
+          if run.get('status')!='completed':
+              # 部分平台失败会返回非零；仍需等整个运行 completed 后按各平台实际构建关联。
+              subprocess.run(['gh','run','watch',release_run_id,'--repo',repository,'--exit-status','--interval','30','--compact'],check=False)
+          finished=get(path)
+          if finished.get('status')!='completed':
+              raise SystemExit('目标发布运行尚未 completed，未开始 Apple 构建关联')
+          print('指定发布运行已结束；结论：'+str(finished.get('conclusion'))+'。接下来按各平台实际有效构建检查。')
+          PY
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install 'PyJWT[crypto]==2.10.1'
+      - name: 只读核对实际应用身份与所选平台
+        id: identity
+        env:
+          SELECTED_PLATFORM: ${{ inputs.platform }}
+          SELECTED_BUILD_NUMBER: ${{ inputs.build_number }}
+        run: |
+          python - <<'PY'
+          import json,os,re,sys
+          sys.path.insert(0,'scripts')
+          import appstore
+          if not re.fullmatch(r'[0-9]+',os.environ['SELECTED_BUILD_NUMBER']):
+              raise SystemExit('必须提供本次实际上传的数字构建号')
+          chosen=appstore.selected_platforms([os.environ['SELECTED_PLATFORM']])
+          app=appstore.find_app(appstore.AppleAPI())
+          if not app: raise SystemExit('未找到本 Bundle 的实际应用记录')
+          appstore.output('app_id',app['id'])
+          appstore.output('platforms',json.dumps(chosen))
+          PY
+
+  attach:
+    needs: resolve
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: ${{ fromJSON(needs.resolve.outputs.platforms) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      APP_STORE_ID: ${{ needs.resolve.outputs.app_id }}
+      BUILD_NUMBER: ${{ inputs.build_number }}
+      APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install 'PyJWT[crypto]==2.10.1'
+      - name: 等待确切构建有效、关联所选商店草稿并回读
+        env:
+          SELECTED_PLATFORM: ${{ matrix.platform }}
+        run: python scripts/attach_store_builds.py --platform "$SELECTED_PLATFORM" --timeout 900
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: YouTubeNewsLive-${{ matrix.platform }}-独立构建关联报告
+          path: build/apple-report
+          if-no-files-found: ignore
+          retention-days: 7

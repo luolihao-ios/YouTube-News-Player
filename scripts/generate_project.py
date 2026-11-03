@@ -1,4 +1,4 @@
-"""以固定 ID 產生可重現的 Xcode 工程，不依賴 XcodeGen 或第三方套件。"""
+"""以固定 ID 产生可重现的三平台 Xcode 工程；使用开发依赖 openstep-parser，不需要 XcodeGen。"""
 from pathlib import Path
 import hashlib
 import json

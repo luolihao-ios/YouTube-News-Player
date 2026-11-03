@@ -1,0 +1,144 @@
+name: YouTubeNewsLive 三平台真实商店截图
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: 默认只采集；capture-upload 才追加截图到对应平台草稿
+        type: choice
+        default: capture
+        options: [capture, capture-upload]
+      platform:
+        description: 同一 App 的原生平台，不包含 tvOS
+        type: choice
+        default: all
+        options: [all, ios, macos, visionos]
+      version:
+        description: 可选的实际构建版本；留空读取源配置；上传时必须匹配各平台草稿
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: youtubenewslive-store-screenshots
+  cancel-in-progress: false
+
+jobs:
+  selection:
+    runs-on: ubuntu-latest
+    outputs:
+      platforms: ${{ steps.selection.outputs.platforms }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - id: selection
+        env:
+          SELECTED_PLATFORM: ${{ inputs.platform }}
+        run: |
+          python - <<'PY'
+          import json,os,sys
+          sys.path.insert(0,'scripts')
+          import appstore
+          appstore.output('platforms',json.dumps(appstore.selected_platforms([os.environ['SELECTED_PLATFORM']])))
+          PY
+
+  capture:
+    needs: selection
+    runs-on: macos-26
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: ${{ fromJSON(needs.selection.outputs.platforms) }}
+    env:
+      YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+      APP_STORE_ID: '6830361548'
+      PRIVACY_POLICY_URL: ${{ vars.PRIVACY_POLICY_URL }}
+      SUPPORT_URL: ${{ vars.SUPPORT_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install 'Pillow==12.3.0'
+      - name: 安全生成本次 CI 运行配置
+        run: |
+          python - <<'PY'
+          import os,runpy
+          if not os.environ.get('YOUTUBE_API_KEY'): raise SystemExit('缺少 YOUTUBE_API_KEY Secret，不能采集真实数据界面')
+          runpy.run_path('scripts/configure_ci.py',run_name='__main__')
+          PY
+      - name: 校验真实 runtime、构建原生 App、启动并采集三语言四页面
+        env:
+          SELECTED_PLATFORM: ${{ matrix.platform }}
+          CAPTURE_VERSION: ${{ inputs.version }}
+        run: |
+          python - <<'PY'
+          import os,subprocess,sys
+          command=[sys.executable,'scripts/capture_store_screenshots.py','--platform',os.environ['SELECTED_PLATFORM'],'--download-runtime']
+          if os.environ.get('CAPTURE_VERSION'): command+=['--version',os.environ['CAPTURE_VERSION']]
+          subprocess.run(command,check=True)
+          PY
+      - name: 离线复核每张图片的官方尺寸、原图、像素与哈希
+        env:
+          SELECTED_PLATFORM: ${{ matrix.platform }}
+        run: python scripts/apple_screenshots.py validate --platform "$SELECTED_PLATFORM" --manifest "build/store-screenshots/$SELECTED_PLATFORM/manifest.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: YouTubeNewsLive-${{ matrix.platform }}-真实商店截图
+          # 刻意限定产物，禁止上传含运行凭据的 App/DerivedData/xcconfig。
+          path: |
+            build/store-screenshots/${{ matrix.platform }}/manifest.json
+            build/store-screenshots/${{ matrix.platform }}/capture-failure.json
+            build/store-screenshots/${{ matrix.platform }}/simctl-inventory.json
+            build/store-screenshots/${{ matrix.platform }}/raw
+            build/store-screenshots/${{ matrix.platform }}/en-US
+            build/store-screenshots/${{ matrix.platform }}/zh-Hans
+            build/store-screenshots/${{ matrix.platform }}/zh-Hant
+          if-no-files-found: warn
+          retention-days: 14
+
+  upload:
+    # 单个平台 runtime 失败须明确失败，但不能阻断其他平台已经采集成功的截图。
+    if: ${{ always() && inputs.operation == 'capture-upload' && needs.selection.result == 'success' }}
+    needs: [selection, capture]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: ${{ fromJSON(needs.selection.outputs.platforms) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install 'Pillow==12.3.0' 'PyJWT[crypto]==2.10.1'
+      - uses: actions/download-artifact@v4
+        with:
+          name: YouTubeNewsLive-${{ matrix.platform }}-真实商店截图
+          path: build/downloaded/${{ matrix.platform }}
+      - name: 预检唯一平台草稿并追加；回读 COMPLETE 和有序关联
+        env:
+          SELECTED_PLATFORM: ${{ matrix.platform }}
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+        run: |
+          python scripts/apple_screenshots.py validate --platform "$SELECTED_PLATFORM" \
+            --manifest "build/downloaded/$SELECTED_PLATFORM/manifest.json"
+          python scripts/apple_screenshots.py upload --platform "$SELECTED_PLATFORM" \
+            --manifest "build/downloaded/$SELECTED_PLATFORM/manifest.json" \
+            --report "build/apple-report/screenshots-$SELECTED_PLATFORM.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: YouTubeNewsLive-${{ matrix.platform }}-截图上传回读报告
+          path: build/apple-report
+          if-no-files-found: warn
+          retention-days: 14
