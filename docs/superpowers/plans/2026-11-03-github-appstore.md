@@ -17,9 +17,13 @@
 - [x] 加密同步 Apple 凭据与本机 YouTube Key 至仓库 Secrets。
 - [x] 先写发布配置、Apple 注册/资料管理测试，再实现脚本；16项本地测试通过。
 - [x] 配置 macOS CI 和可手动触发的签名上传流程，完成本地回归、密钥检查及独立代码审查。
-- [ ] 提交推送项目并触发构建、Apple 准备流程。
+- [x] 提交推送项目并触发构建、Apple 准备流程；初始源码提交 `016ee25`，发布工作流 `41601779524` 已启动。
 - [ ] 必要时在 App Store Connect 新建 NewsLive，回读名称和副标题；记录真实上传状态。
 
 ## 网页操作阻塞
 
 Windows Computer Use 在绑定 Chrome 页面时因无法可靠识别当前浏览器 URL 而停止，未执行任何 App Store Connect 网页操作。不能继续使用网页自动化或绕过该限制。若 Apple API 查询不到应用记录，仍需用户在 App Store Connect 网页手动创建一次；工作流不会虚构 App ID 或宣称已经创建。
+
+## Apple API 实际回读
+
+准备任务成功，Bundle ID `com.luolihao.newslive` 已注册，对应 Apple Bundle 资源 ID `976224PM7U`。回读 `record_ready=false`、`app_id=null`，因此没有填写商店名称或副标题，也没有上传 IPA。需要在网页新建 NewsLive，选择该 Bundle ID，SKU `newslive-ios`，主语言 English (U.S.)。当前等待 GitHub macOS 验证构建；按用户要求不继续轮询等包。
