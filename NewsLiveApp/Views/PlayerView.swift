@@ -12,8 +12,6 @@ struct PlayerView: View {
     @State private var playerError: String?
     @State private var reload = 0
     @State private var selectedVideoID: String?
-    @State private var recovery = InAppPlaybackRecovery()
-    @State private var showWebPlayback = false
     private var snapshot: ChannelSnapshot? { store.snapshots[channel.id] }
     private var video: LiveVideo? {
         snapshot?.videos.first(where: { $0.id == selectedVideoID }) ?? snapshot?.videos.first
@@ -60,16 +58,6 @@ struct PlayerView: View {
             .onChange(of: store.activeChannel?.id) { _, id in if id != channel.id { session.pause() } }
             .onChange(of: playerConsent) { _, consent in if !consent { session.pause() } }
             .onDisappear { session.pause() }
-            .fullScreenCover(isPresented: $showWebPlayback, onDismiss: {
-                recovery.dismiss()
-                PlaybackDiagnostics.shared.record("web_playback_dismissed")
-            }) {
-                if let identity = recovery.activeVideoID,
-                   let url = URL(string: "https://www.youtube.com/watch?v=\(identity)") {
-                    InAppYouTubeBrowser(url: url) { showWebPlayback = false }
-                        .ignoresSafeArea()
-                }
-            }
         }
     }
 
@@ -86,13 +74,6 @@ struct PlayerView: View {
                 }
             }.foregroundStyle(.white).padding(20).frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if let video {
-            if recovery.usesWebpage(for: video.id) {
-                Button { openWebPlayback(videoID: video.id, automatically: false) } label: {
-                    Label("在 App 內繼續觀看", systemImage: "play.circle.fill")
-                        .font(.headline).foregroundStyle(.white)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }.buttonStyle(.plain)
-            } else {
             YouTubeWebView(videoID: video.id, session: session) { event in
                 switch event {
                 case .ready: isPlaying = false; playerError = nil
@@ -103,10 +84,8 @@ struct PlayerView: View {
                         store.didStartPlaying(channel)
                     }
                 case .failed(let message): playerError = message; isPlaying = false
-                case .webPlaybackRequired: openWebPlayback(videoID: video.id, automatically: true)
                 }
             }.id("\(channel.id)-\(video.id)-\(reload)")
-            }
         } else {
             VStack(spacing: 12) {
                 if store.loading.contains(channel.id) { ProgressView().tint(.white); Text("正在尋找直播…") }
@@ -117,17 +96,6 @@ struct PlayerView: View {
                 }
             }.foregroundStyle(.white).padding(20).frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-    }
-
-    private func openWebPlayback(videoID: String, automatically: Bool) {
-        guard store.activeChannel?.id == channel.id, video?.id == videoID,
-              recovery.present(videoID: videoID, automatically: automatically) else { return }
-        selectedVideoID = videoID
-        session.pause()
-        isPlaying = false
-        playerError = nil
-        PlaybackDiagnostics.shared.record("web_playback_presented", fields: ["videoID": videoID])
-        showWebPlayback = true
     }
 
     private var channelInfo: some View {

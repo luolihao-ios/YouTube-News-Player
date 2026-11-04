@@ -99,7 +99,6 @@ struct DesktopPlayerView: View {
                         store.didStartPlaying(channel)
                     }
                 case .failed(let message): playerError = message; isPlaying = false
-                case .webPlaybackRequired: playerError = PlayerFailure.verificationMessage; isPlaying = false
                 }
             }.id("\(channel.id)-\(video.id)-\(reload)")
         } else {
