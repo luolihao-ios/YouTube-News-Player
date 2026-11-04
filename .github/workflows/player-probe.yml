@@ -1,0 +1,45 @@
+name: YouTubeNewsLive 真实 WebKit 播放对照
+on:
+  workflow_dispatch:
+    inputs:
+      video_ids:
+        description: 最多两场真实公开直播；只访问官方播放器，不绕过验证
+        type: string
+        default: '2wXzyS-kSNk,m_dhMSvUCIc'
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: macos-26-intel
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: 编译实际 WebKit 播放对照程序
+        run: |
+          mkdir -p build/player-probe
+          xcrun swiftc -parse-as-library -swift-version 5 scripts/probe_youtube_webkit.swift -o build/player-probe/probe
+      - name: 对照本地 iframe 与官方直接加载，检查真实视频时间推进
+        env:
+          VIDEO_IDS: ${{ inputs.video_ids }}
+        run: |
+          python3 - <<'PY'
+          import json,os,pathlib,re,subprocess
+          ids=os.environ['VIDEO_IDS'].split(',')
+          if not 1<=len(ids)<=2 or any(not re.fullmatch(r'[A-Za-z0-9_-]{11}',item) for item in ids):
+              raise SystemExit('只允许一至两个实际视频 ID')
+          output=pathlib.Path('build/player-probe/results').resolve()
+          for identity in ids:
+              for mode in ['wrapper','direct']:
+                  subprocess.run(['build/player-probe/probe',mode,identity,str(output),'NewsLiveApp/Resources/YouTubePlayer.html'],check=True,timeout=100)
+          reports=[json.loads(p.read_text()) for p in output.glob('*.json')]
+          print(json.dumps(reports,ensure_ascii=False,indent=2))
+          if not any(r['mode']=='direct' and r['result']=='media_playing' for r in reports):
+              raise SystemExit('直接加载也未取得真实播放证据，禁止据此声称播放已修复')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: YouTubeNewsLive-WebKit-实际播放结果
+          path: build/player-probe/results
+          if-no-files-found: warn
+          retention-days: 7
