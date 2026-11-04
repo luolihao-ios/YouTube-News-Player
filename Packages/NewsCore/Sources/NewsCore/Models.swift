@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
 
 public enum ChannelCategory: String, Codable, CaseIterable, Sendable, Identifiable {
     case taiwan = "台灣新聞", international = "國際新聞", finance = "財經", general = "綜合"
@@ -143,6 +146,11 @@ public struct PlayerConfiguration: Sendable {
     public var json: String {
         let data = try! JSONSerialization.data(withJSONObject: ["videoID": videoID, "origin": origin.absoluteString], options: [.sortedKeys, .withoutEscapingSlashes])
         return String(decoding: data, as: UTF8.self)
+    }
+    public var pageRequest: URLRequest {
+        var request = URLRequest(url: origin.appendingPathComponent("player"))
+        request.setValue(origin.absoluteString, forHTTPHeaderField: "Referer")
+        return request
     }
 }
 

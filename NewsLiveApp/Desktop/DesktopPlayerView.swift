@@ -3,7 +3,6 @@ import NewsCore
 
 struct DesktopPlayerView: View {
     @EnvironmentObject private var store: NewsStore
-    @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("playerConsent.v1") private var playerConsent = false
     @StateObject private var session = PlayerSession()
@@ -11,9 +10,12 @@ struct DesktopPlayerView: View {
     @State private var playbackMessage = "點擊 YouTube 播放按鈕開始收看"
     @State private var reload = 0
     @State private var detailTab = 0
+    @State private var selectedVideoID: String?
     let channel: ChannelSeed
     private var snapshot: ChannelSnapshot? { store.snapshots[channel.id] }
-    private var video: LiveVideo? { snapshot?.videos.first }
+    private var video: LiveVideo? {
+        snapshot?.videos.first(where: { $0.id == selectedVideoID }) ?? snapshot?.videos.first
+    }
 
     var body: some View {
         NavigationStack {
@@ -33,8 +35,10 @@ struct DesktopPlayerView: View {
                                     Label(error, systemImage: "exclamationmark.triangle").font(.subheadline).foregroundStyle(.secondary)
                                     HStack {
                                         Button("重新載入") { retry() }.buttonStyle(.bordered)
-                                        Link("在 YouTube 開啟", destination: video?.watchURL ?? channel.channelURL)
+                                        Button("選擇其他頻道") { closePlayer() }.buttonStyle(.bordered)
                                     }
+                                    Link("在 YouTube 直接觀看", destination: video?.watchURL ?? channel.channelURL)
+                                    ShareLink(item: PlaybackDiagnostics.shared.fileURL) { Label("匯出播放診斷", systemImage: "square.and.arrow.up") }
                                 }.padding(16).frame(maxWidth: .infinity, alignment: .leading)
                                     .background(Color.newsSurface, in: RoundedRectangle(cornerRadius: 13))
                             }
@@ -47,6 +51,7 @@ struct DesktopPlayerView: View {
                                     .disabled(store.loading.contains(channel.id))
                                 Spacer()
                             }.buttonStyle(.bordered)
+                            liveVideoMenu
                             Picker("頻道詳情", selection: $detailTab) {
                                 Text("直播資訊").tag(0)
                                 Text("頻道簡介").tag(1)
@@ -61,19 +66,19 @@ struct DesktopPlayerView: View {
             .navigationTitle(channel.name)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button { session.pause(); dismiss() } label: { Label("關閉", systemImage: "xmark") }
+                    Button { closePlayer() } label: { Label("返回", systemImage: "chevron.left") }
                 }
                 ToolbarItem(placement: .primaryAction) {
-                    Link(destination: video?.watchURL ?? channel.channelURL) { Label("在 YouTube 開啟", systemImage: "arrow.up.right.square") }
+                    Link(destination: video?.watchURL ?? channel.channelURL) { Label("在 YouTube 直接觀看", systemImage: "arrow.up.right.square") }
                 }
             }
         }
-        .frame(minWidth: 560, idealWidth: 980, minHeight: 620, idealHeight: 780)
         .task(id: channel.id) {
             session.pause(); playerError = nil
             await store.refresh(channel)
         }
         .onChange(of: scenePhase) { _, phase in if phase != .active { session.pause() } }
+        .onChange(of: store.activeChannel?.id) { _, id in if id != channel.id { session.pause() } }
         .onChange(of: playerConsent) { _, consent in if !consent { session.pause() } }
         .onDisappear { session.pause() }
     }
@@ -83,7 +88,7 @@ struct DesktopPlayerView: View {
             VStack(spacing: 14) {
                 Image(systemName: "play.rectangle").font(.system(size: 38, weight: .light))
                 Text("使用 YouTube 官方播放器").font(.headline)
-                Text("載入播放器會連線至 YouTube / Google，並依其政策處理裝置與播放資訊。")
+                Text("載入後會連線至 YouTube / Google。同意後在本 App 保存 YouTube 播放 Cookie 與網站資料，可在設定清除；不與 Safari 共用登入。")
                     .font(.subheadline).foregroundStyle(.white.opacity(0.72)).multilineTextAlignment(.center)
                 HStack(spacing: 20) {
                     Link("Google 隱私政策", destination: URL(string: "https://policies.google.com/privacy")!)
@@ -102,7 +107,7 @@ struct DesktopPlayerView: View {
                     case 3: playbackMessage = "YouTube 正在緩衝…"
                     default: break
                     }
-                case .failed(let message): playerError = message
+                case .failed(let message): playerError = message; playbackMessage = "播放未開始，請查看下方提示"
                 }
             }.id("\(channel.id)-\(video.id)-\(reload)")
         } else {
@@ -114,7 +119,7 @@ struct DesktopPlayerView: View {
                     Image(systemName: "video.slash").font(.system(size: 34, weight: .light))
                     Text(AppConfiguration.isConfigured ? "目前沒有可嵌入的公開直播" : "YouTube 服務尚未設定").font(.headline)
                     Text("可前往頻道頁確認最新節目").font(.subheadline).foregroundStyle(.white.opacity(0.7))
-                    Link("前往 YouTube 頻道", destination: channel.channelURL).buttonStyle(.bordered)
+                    Link("在 YouTube 直接觀看", destination: channel.channelURL).buttonStyle(.bordered)
                 }
             }.foregroundStyle(.white).padding(24).frame(maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -138,6 +143,26 @@ struct DesktopPlayerView: View {
                 }.font(.caption).foregroundStyle(.secondary)
                 Text(playbackMessage).font(.caption).foregroundStyle(.secondary)
             }
+        }
+    }
+
+    @ViewBuilder private var liveVideoMenu: some View {
+        if let videos = snapshot?.videos, videos.count > 1 {
+            Menu {
+                ForEach(videos) { next in
+                    Button {
+                        session.pause()
+                        selectedVideoID = next.id
+                        playerError = nil
+                        playbackMessage = "點擊 YouTube 播放按鈕開始收看"
+                    } label: {
+                        if video?.id == next.id { Label(next.title, systemImage: "checkmark") }
+                        else { Text(next.title) }
+                    }
+                }
+            } label: {
+                Label("切換本頻道直播", systemImage: "list.bullet.rectangle")
+            }.buttonStyle(.bordered)
         }
     }
 
@@ -169,7 +194,7 @@ struct DesktopPlayerView: View {
                             Text(item.subtitle).font(.caption).foregroundStyle(.secondary)
                         }
                         Spacer()
-                        Link("查看頻道", destination: item.channelURL)
+                        Button("收看頻道") { session.pause(); store.open(item) }.buttonStyle(.bordered)
                     }.padding(.vertical, 12)
                     Divider()
                 }
@@ -180,5 +205,9 @@ struct DesktopPlayerView: View {
     private func retry() {
         session.pause(); playerError = nil; reload += 1
         Task { await store.refresh(channel, force: true) }
+    }
+    private func closePlayer() {
+        session.pause()
+        store.activeChannel = nil
     }
 }

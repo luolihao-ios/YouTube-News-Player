@@ -33,6 +33,7 @@ function onYouTubeIframeAPIReady() {
   });
 }
 window.NewsPlayer = {
+  scriptFailed:()=>send({type:'loadError'}),
   pause:()=>{ if(player && player.pauseVideo) player.pauseVideo(); },
   destroy:()=>{
     if(player){ if(player.pauseVideo) player.pauseVideo(); if(player.destroy) player.destroy(); player=null; }
@@ -42,6 +43,6 @@ document.addEventListener('visibilitychange',()=>{
   if(document.hidden) window.NewsPlayer.pause();
 });
 </script>
-<script src="https://www.youtube.com/iframe_api"></script>
+<script src="https://www.youtube.com/iframe_api" onerror="window.NewsPlayer.scriptFailed()"></script>
 </body>
 </html>

@@ -9,6 +9,7 @@ struct SettingsView: View {
     @State private var confirmClear = false
     @State private var debugKey = ""
     @State private var keySaved = false
+    @State private var clearingPlayerData = false
     var body: some View {
         NavigationStack {
             Form {
@@ -23,7 +24,7 @@ struct SettingsView: View {
                     Toggle("保存最近觀看", isOn: $historyEnabled)
                         .onChange(of: historyEnabled) { _, enabled in if !enabled { store.clearHistory() } }
                     if playerConsent {
-                        Button("撤回 YouTube 播放同意") { playerConsent = false }
+                        Button("撤回 YouTube 播放同意") { playerConsent = false; clearPlayerData() }
                     } else {
                         LabeledContent("YouTube 播放器", value: "首次播放時確認")
                     }
@@ -33,6 +34,11 @@ struct SettingsView: View {
                 Section("本機資料") {
                     Button("清除最近觀看") { store.clearHistory() }.disabled(store.library.recent.isEmpty)
                     Button("清除頻道快取") { store.clearCache() }
+                    Button(clearingPlayerData ? "正在清除…" : "清除 YouTube 播放資料") { clearPlayerData() }.disabled(clearingPlayerData)
+                    ShareLink(item: PlaybackDiagnostics.shared.fileURL) { Label("匯出播放診斷", systemImage: "square.and.arrow.up") }
+                    Button("清除播放診斷") { PlaybackDiagnostics.shared.clear() }
+                    Text("播放診斷僅保存在本機，不含 Cookie、Token 或 API Key。可自行選擇是否分享。")
+                        .font(.caption).foregroundStyle(.secondary)
                     Button("清除所有本機資料", role: .destructive) { confirmClear = true }
                 }
                 Section("關於與隱私") {
@@ -76,15 +82,26 @@ struct SettingsView: View {
                 #endif
                 Task { await updates.checkOnSettingsOpen() }
             }
-            .confirmationDialog("清除收藏、觀看記錄、快取與播放同意？", isPresented: $confirmClear, titleVisibility: .visible) {
+            .confirmationDialog("清除收藏、觀看記錄、快取、YouTube 播放資料與播放同意？", isPresented: $confirmClear, titleVisibility: .visible) {
                 Button("清除所有本機資料", role: .destructive) {
                     for channel in store.favoriteChannels { store.toggleFavorite(channel) }
                     store.clearHistory(); store.clearCache(); historyEnabled = false; playerConsent = false
+                    clearPlayerData(clearDiagnostics: true)
                     #if DEBUG && !STORE_SCREENSHOTS
                     UserDefaults.standard.removeObject(forKey: "debugAPIKey"); debugKey = ""; keySaved = false
                     #endif
                 }
             }
+        }
+    }
+    private func clearPlayerData(clearDiagnostics: Bool = false) {
+        if clearDiagnostics { PlaybackDiagnostics.shared.clear() }
+        guard !clearingPlayerData else { return }
+        clearingPlayerData = true
+        Task {
+            await PlayerWebData.clear()
+            if clearDiagnostics { PlaybackDiagnostics.shared.clear() }
+            clearingPlayerData = false
         }
     }
 }
@@ -97,13 +114,15 @@ struct PrivacyView: View {
             }
             Section("YouTube / Google") {
                 Text("頻道、縮略圖和直播資料透過 YouTube Data API 與 Google 圖片服務載入。這些網路連線會向服務提供者傳送 IP 位址與必要請求資訊。")
-                Text("確認載入播放器後，App 會連線至 YouTube 官方 IFrame Player。YouTube / Google 可能處理 IP 位址、裝置、Cookie 及播放互動等資訊，依其服務條款與隱私政策運作。播放器採用非持久 WebKit 資料儲存，這不代表第三方不處理資料。")
+                Text("確認載入播放器後，App 會連線至 YouTube 官方 IFrame Player。YouTube / Google 可能處理 IP 位址、裝置、Cookie 及播放互動等資訊，依其服務條款與隱私政策運作。同意後在本 App 保存 YouTube 播放 Cookie 與網站資料，可在設定清除；不與 Safari 共用登入。")
+                Text("備用網頁由系統 Safari 元件管理，網站資料依系統設定處理；不會將登入狀態轉入內嵌播放器。")
+                Text("播放診斷日誌僅保存在本機，不含 Cookie、Token 或 API Key。只有自行使用「匯出播放診斷」分享時，檔案才會傳給您選擇的接收者。")
                 Text("App 不提取媒體地址、不下載影音、不跳過或遮蔽廣告。播放可用性、廣告及地區限制由 YouTube 和內容提供者控制。")
                 Link("YouTube 服務條款", destination: URL(string: "https://www.youtube.com/t/terms")!)
                 Link("Google 隱私政策", destination: URL(string: "https://policies.google.com/privacy")!)
             }
             Section("刪除與控制") {
-                Text("可在設定清除本機資料，並撤回載入播放器的同意。刪除 App 亦會移除其本機資料。API 資料快取最長保留 24 小時。第三方所處理的資料請依 Google 隱私政策管理。")
+                Text("可在設定清除 YouTube 播放資料、清除所有本機資料或撤回載入播放器的同意。清除播放資料或撤回同意時會停止播放並移除本 App 的 WebKit Cookie 與網站資料。刪除 App 亦會移除其本機資料。API 資料快取最長保留 24 小時。第三方所處理的資料請依 Google 隱私政策管理。")
             }
         }.navigationTitle("隱私與資料使用").navigationBarTitleDisplayMode(.inline)
     }

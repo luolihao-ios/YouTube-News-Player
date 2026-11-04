@@ -1,7 +1,7 @@
 import SwiftUI
 import NewsCore
 
-/// macOS 与 visionOS 共享原生窗口布局，播放器始终由根视图的唯一 sheet 承载。
+/// macOS 与 visionOS 在原窗口内切换完整播放页面。
 struct DesktopRootView: View {
     @EnvironmentObject private var store: NewsStore
     @Environment(\.scenePhase) private var scenePhase
@@ -16,6 +16,22 @@ struct DesktopRootView: View {
     }
 
     var body: some View {
+        Group {
+            if let channel = store.activeChannel {
+                DesktopPlayerView(channel: channel).id(channel.id)
+            } else {
+                libraryNavigation
+            }
+        }
+        .tint(Color.newsRed)
+        .task { await store.bootstrap() }
+        .onChange(of: scenePhase) { _, phase in if phase == .active { store.expireCache() } }
+        .onReceive(Timer.publish(every: 60, on: .main, in: .common).autoconnect()) { _ in
+            if scenePhase == .active { store.expireCache() }
+        }
+    }
+
+    private var libraryNavigation: some View {
         NavigationSplitView {
             List(selection: selection) {
                 Section {
@@ -47,15 +63,6 @@ struct DesktopRootView: View {
             } else {
                 libraryContent
             }
-        }
-        .tint(Color.newsRed)
-        .sheet(item: $store.activeChannel) { channel in
-            DesktopPlayerView(channel: channel).environmentObject(store)
-        }
-        .task { await store.bootstrap() }
-        .onChange(of: scenePhase) { _, phase in if phase == .active { store.expireCache() } }
-        .onReceive(Timer.publish(every: 60, on: .main, in: .common).autoconnect()) { _ in
-            if scenePhase == .active { store.expireCache() }
         }
     }
 

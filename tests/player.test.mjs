@@ -56,3 +56,16 @@ test('未初始化时暂停或销毁不崩溃',()=>{
   const h=harness();assert.doesNotThrow(()=>h.context.window.NewsPlayer.pause());
   assert.doesNotThrow(()=>h.context.window.NewsPlayer.destroy());
 });
+test('官方脚本加载失败有明确事件，且不会发起登录或强制播放',()=>{
+  const h=harness();
+  h.context.window.NewsPlayer.scriptFailed();
+  assert.deepEqual(JSON.parse(JSON.stringify(h.messages)),[{type:'loadError'}]);
+  assert.deepEqual(h.calls,[]);
+  assert.match(h.html,/onerror="window\.NewsPlayer\.scriptFailed\(\)"/);
+});
+test('自动播放受阻只通知原生层，保留用户播放手势',()=>{
+  const h=harness();h.context.onYouTubeIframeAPIReady();
+  h.options.events.onAutoplayBlocked();
+  assert.equal(h.messages.at(-1).type,'autoplayBlocked');
+  assert.deepEqual(h.calls,[]);
+});

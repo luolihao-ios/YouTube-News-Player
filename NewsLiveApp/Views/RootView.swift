@@ -10,8 +10,8 @@ struct RootView: View {
             FavoritesView().tabItem { Label("收藏", systemImage: "heart") }.tag(AppTab.favorites)
             SettingsView().tabItem { Label("設定", systemImage: "gearshape") }.tag(AppTab.settings)
         }
-        .sheet(item: $store.activeChannel) { channel in
-            PlayerView(channel: channel).environmentObject(store)
+        .fullScreenCover(item: $store.activeChannel) { channel in
+            PlayerView(channel: channel).id(channel.id).environmentObject(store)
         }
         .task { await store.bootstrap() }
         .onChange(of: scenePhase) { _, phase in if phase == .active { store.expireCache() } }

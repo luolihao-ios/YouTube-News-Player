@@ -68,6 +68,15 @@ final class NewsCoreTests: XCTestCase {
         XCTAssertTrue(config.json.contains("abcdefghijk"))
     }
 
+    func testPlayerPageRequestKeepsHTTPSAppIdentityWithoutCredentials() throws {
+        let config = try PlayerConfiguration(videoID: "abcdefghijk", bundleID: "COM.Example.News")
+        let request = config.pageRequest
+        XCTAssertEqual(request.url?.absoluteString, "https://com.example.news/player")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "Referer"), "https://com.example.news")
+        XCTAssertNil(request.url?.query)
+        XCTAssertNil(request.value(forHTTPHeaderField: "Authorization"))
+    }
+
     func testVersionsCompareNumericallyWithoutFalsePatchUpdates() {
         XCTAssertTrue(AppVersion.isNewer("1.10.0", than: "1.9.9"))
         XCTAssertFalse(AppVersion.isNewer("1.0.0", than: "1.0"))

@@ -7,6 +7,7 @@ struct DesktopSettingsView: View {
     @AppStorage("historyEnabled") private var historyEnabled = false
     @AppStorage("playerConsent.v1") private var playerConsent = false
     @State private var confirmClear = false
+    @State private var clearingPlayerData = false
 
     var body: some View {
         Form {
@@ -30,7 +31,7 @@ struct DesktopSettingsView: View {
                 Toggle("保存最近觀看", isOn: $historyEnabled)
                     .onChange(of: historyEnabled) { _, enabled in if !enabled { store.clearHistory() } }
                 if playerConsent {
-                    Button("撤回 YouTube 播放同意") { playerConsent = false }
+                    Button("撤回 YouTube 播放同意") { playerConsent = false; clearPlayerData() }
                 } else {
                     LabeledContent("YouTube 播放器", value: "首次播放時確認")
                 }
@@ -40,6 +41,11 @@ struct DesktopSettingsView: View {
             Section("本機資料") {
                 Button("清除最近觀看") { store.clearHistory() }.disabled(store.library.recent.isEmpty)
                 Button("清除頻道快取") { store.clearCache() }
+                Button(clearingPlayerData ? "正在清除…" : "清除 YouTube 播放資料") { clearPlayerData() }.disabled(clearingPlayerData)
+                ShareLink(item: PlaybackDiagnostics.shared.fileURL) { Label("匯出播放診斷", systemImage: "square.and.arrow.up") }
+                Button("清除播放診斷") { PlaybackDiagnostics.shared.clear() }
+                Text("播放診斷僅保存在本機，不含 Cookie、Token 或 API Key。可自行選擇是否分享。")
+                    .font(.caption).foregroundStyle(.secondary)
                 Button("清除所有本機資料", role: .destructive) { confirmClear = true }
             }
             Section("隱私與支援") {
@@ -70,12 +76,23 @@ struct DesktopSettingsView: View {
         .formStyle(.grouped)
         .navigationTitle("設定")
         .task { await updates.checkOnSettingsOpen() }
-        .confirmationDialog("清除收藏、觀看記錄、快取與播放同意？", isPresented: $confirmClear, titleVisibility: .visible) {
+        .confirmationDialog("清除收藏、觀看記錄、快取、YouTube 播放資料與播放同意？", isPresented: $confirmClear, titleVisibility: .visible) {
             Button("清除所有本機資料", role: .destructive) {
                 for channel in store.favoriteChannels { store.toggleFavorite(channel) }
                 store.clearHistory(); store.clearCache()
                 historyEnabled = false; playerConsent = false; appearance = "system"
+                clearPlayerData(clearDiagnostics: true)
             }
+        }
+    }
+    private func clearPlayerData(clearDiagnostics: Bool = false) {
+        if clearDiagnostics { PlaybackDiagnostics.shared.clear() }
+        guard !clearingPlayerData else { return }
+        clearingPlayerData = true
+        Task {
+            await PlayerWebData.clear()
+            if clearDiagnostics { PlaybackDiagnostics.shared.clear() }
+            clearingPlayerData = false
         }
     }
 }
@@ -88,13 +105,14 @@ private struct DesktopPrivacyView: View {
             }
             Section("YouTube / Google") {
                 Text("頻道、縮圖及直播資料透過 YouTube Data API 與 Google 圖片服務取得。這些連線會向服務提供者傳送 IP 位址及必要的請求資訊。")
-                Text("同意後才會載入官方 YouTube IFrame Player。YouTube / Google 可能處理裝置、Cookie 及播放互動等資訊。播放器採用非持久 WebKit 資料儲存，但不代表第三方不處理資料。")
+                Text("同意後才會載入官方 YouTube IFrame Player。YouTube / Google 可能處理裝置、Cookie 及播放互動等資訊。同意後在本 App 保存 YouTube 播放 Cookie 與網站資料，可在設定清除；不與 Safari 共用登入。")
+                Text("播放診斷日誌僅保存在本機，不含 Cookie、Token 或 API Key。只有自行使用「匯出播放診斷」分享時，檔案才會傳給您選擇的接收者。")
                 Text("App 不提取媒體地址、不下載影音、不跳過或遮蔽廣告。播放可用性、地區限制、畫質、字幕與全螢幕功能由官方播放器和內容提供者控制。")
                 Link("YouTube 服務條款", destination: URL(string: "https://www.youtube.com/t/terms")!)
                 Link("Google 隱私政策", destination: URL(string: "https://policies.google.com/privacy")!)
             }
             Section("資料控制") {
-                Text("可在設定清除本機資料或撤回播放同意。API 快取最長保留 24 小時。第三方資料請依 Google 隱私政策管理。")
+                Text("可在設定清除 YouTube 播放資料、清除所有本機資料或撤回播放同意。清除播放資料或撤回同意時會停止播放並移除本 App 的 WebKit Cookie 與網站資料。API 快取最長保留 24 小時。第三方資料請依 Google 隱私政策管理。")
             }
         }.formStyle(.grouped).navigationTitle("隱私與資料使用")
     }

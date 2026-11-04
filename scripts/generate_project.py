@@ -176,7 +176,7 @@ def generate():
         scheme = template.replace(ident("target"),ident(platform+":target")).replace('BlueprintName="NewsLive"','BlueprintName="'+details['scheme']+'"')
         (schemes/(details["scheme"]+".xcscheme")).write_text(scheme,encoding="utf8")
     base = plistlib.loads((ROOT/"Config/Info.plist").read_bytes())
-    mac = {key:value for key,value in base.items() if not key.startswith("UI") and key != "LSRequiresIPhoneOS"}
+    mac = {key:value for key,value in base.items() if not key.startswith("UI") and key not in {"LSRequiresIPhoneOS", "LSSupportsOpeningDocumentsInPlace"}}
     mac.update(LSApplicationCategoryType="public.app-category.news", NSHighResolutionCapable=True, LSMinimumSystemVersion="$(MACOSX_DEPLOYMENT_TARGET)")
     (ROOT/"Config/Info-macOS.plist").write_bytes(plistlib.dumps(mac,sort_keys=False))
     vision = dict(base); vision.pop("LSRequiresIPhoneOS",None); vision.pop("UISupportedInterfaceOrientations",None); vision.pop("UISupportedInterfaceOrientations~ipad",None)
