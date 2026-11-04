@@ -55,8 +55,8 @@ public final class PlaybackLog: @unchecked Sendable {
         // 極小容量無法容納一筆 JSON 時，不寫入半筆紀錄。
         guard data.count <= maxBytes else { return }
 
-        let size = try fileURL.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
-        if size + data.count > maxBytes {
+        let size = try byteCount(at: fileURL)
+        if size + UInt64(data.count) > UInt64(maxBytes) {
             if FileManager.default.fileExists(atPath: backupURL.path) {
                 try FileManager.default.removeItem(at: backupURL)
             }
@@ -82,7 +82,7 @@ public final class PlaybackLog: @unchecked Sendable {
 
     private func boundExistingFile(_ url: URL) throws {
         guard FileManager.default.fileExists(atPath: url.path),
-              (try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0) > maxBytes else { return }
+              try byteCount(at: url) > UInt64(maxBytes) else { return }
         let data = try Data(contentsOf: url)
         let suffix = data.suffix(maxBytes)
         let bounded: Data
@@ -92,6 +92,13 @@ public final class PlaybackLog: @unchecked Sendable {
             bounded = Data()
         }
         try bounded.write(to: url, options: [.atomic])
+    }
+
+    private func byteCount(at url: URL) throws -> UInt64 {
+        // URL 资源值会缓存；连续写入时必须从实际文件句柄读取当前位置上限。
+        let handle = try FileHandle(forReadingFrom: url)
+        defer { try? handle.close() }
+        return try handle.seekToEnd()
     }
 
     private static func safeEvent(_ event: String) -> String {
