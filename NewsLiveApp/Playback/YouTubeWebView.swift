@@ -10,7 +10,7 @@ typealias NativePlayerRepresentable = UIViewRepresentable
 #endif
 
 enum PlayerEvent {
-    case ready, state(Int), failed(String)
+    case ready, state(Int), failed(String), webPlaybackRequired
 }
 
 @MainActor
@@ -101,6 +101,7 @@ struct YouTubeWebView: NativePlayerRepresentable {
         private let diagnosticID: String
         var timeout: Task<Void, Never>?
         private var failureReported = false
+        private var webpageRequested = false
         init(session: PlayerSession, videoID: String, onEvent: @escaping (PlayerEvent) -> Void) {
             self.session = session; self.videoID = videoID; self.onEvent = onEvent; diagnosticID = session.diagnosticID
         }
@@ -110,6 +111,14 @@ struct YouTubeWebView: NativePlayerRepresentable {
         }
         private func fail(_ message: String) {
             timeout?.cancel(); failureReported = true; onEvent(.failed(message))
+        }
+        private func requestWebPlayback() {
+            guard !webpageRequested else { return }
+            webpageRequested = true
+            timeout?.cancel(); failureReported = true
+            session?.pause()
+            record("web_playback_required")
+            onEvent(.webPlaybackRequired)
         }
         func startTimeout() {
             timeout = Task { [weak self] in
@@ -121,6 +130,7 @@ struct YouTubeWebView: NativePlayerRepresentable {
         func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
             guard message.name == "youtube", message.frameInfo.isMainFrame,
                   let body = message.body as? [String: Any], let type = body["type"] as? String else { return }
+            guard !webpageRequested else { return }
             switch type {
             case "ready":
                 timeout?.cancel(); record("iframe_ready")
@@ -134,7 +144,8 @@ struct YouTubeWebView: NativePlayerRepresentable {
             case "error":
                 let code = body["code"] as? Int ?? -1
                 record("youtube_error", fields: ["code": String(code)])
-                fail(PlayerFailure.message(for: code))
+                if InAppPlaybackRecovery.shouldOfferWebpage(for: code) { requestWebPlayback() }
+                else { fail(PlayerFailure.message(for: code)) }
             case "autoplayBlocked": record("user_gesture_required")
             case "loadError":
                 record("iframe_api_load_failure")
@@ -175,7 +186,7 @@ struct YouTubeWebView: NativePlayerRepresentable {
             switch decision {
             case .allow: decisionHandler(.allow)
             case .verificationRequired:
-                fail(PlayerFailure.verificationMessage); decisionHandler(.cancel)
+                decisionHandler(.cancel); requestWebPlayback()
             case .openExternal:
                 if let url = action.request.url { openExternal(url) }
                 decisionHandler(.cancel)
@@ -186,7 +197,7 @@ struct YouTubeWebView: NativePlayerRepresentable {
             let decision = PlayerNavigationPolicy.decision(for: action.request.url, isMainFrame: true,
                 isUserActivated: action.navigationType == .linkActivated, opensNewWindow: true)
             recordNavigation(action, decision: decision)
-            if decision == .verificationRequired { fail(PlayerFailure.verificationMessage) }
+            if decision == .verificationRequired { requestWebPlayback() }
             else if decision == .openExternal, let url = action.request.url { openExternal(url) }
             return nil
         }

@@ -110,12 +110,12 @@ struct PrivacyView: View {
     var body: some View {
         List {
             Section("本機資料") {
-                Text("收藏頻道、外觀偏好和播放同意保存在本機。最近觀看預設不記錄，啟用後僅保留最近 20 個頻道，可隨時關閉或清除。App 未設置登入、廣告 SDK 或自有分析追蹤。")
+                Text("收藏頻道、外觀偏好和播放同意保存在本機。最近觀看預設不記錄，啟用後僅保留最近 20 個頻道，可隨時關閉或清除。App 不建立自有帳號；YouTube 登入由系統網頁管理。App 沒有廣告 SDK 或自有分析追蹤。")
             }
             Section("YouTube / Google") {
                 Text("頻道、縮略圖和直播資料透過 YouTube Data API 與 Google 圖片服務載入。這些網路連線會向服務提供者傳送 IP 位址與必要請求資訊。")
                 Text("確認載入播放器後，App 會連線至 YouTube 官方 IFrame Player。YouTube / Google 可能處理 IP 位址、裝置、Cookie 及播放互動等資訊，依其服務條款與隱私政策運作。同意後在本 App 保存 YouTube 播放 Cookie 與網站資料，可在設定清除；不與 Safari 共用登入。")
-                Text("備用網頁由系統 Safari 元件管理，網站資料依系統設定處理；不會將登入狀態轉入內嵌播放器。")
+                Text("需要登入驗證時，會在 App 內的系統全螢幕網頁完成登入並繼續觀看。帳號及網站資料由系統管理，不會轉入內嵌播放器；清除 App 的播放資料不會登出系統網頁。")
                 Text("播放診斷日誌僅保存在本機，不含 Cookie、Token 或 API Key。只有自行使用「匯出播放診斷」分享時，檔案才會傳給您選擇的接收者。")
                 Text("App 不提取媒體地址、不下載影音、不跳過或遮蔽廣告。播放可用性、廣告及地區限制由 YouTube 和內容提供者控制。")
                 Link("YouTube 服務條款", destination: URL(string: "https://www.youtube.com/t/terms")!)

@@ -65,11 +65,10 @@ final class PlaybackProbe: NSObject, NSApplicationDelegate, WKNavigationDelegate
         if mode == "wrapper" {
             script = "({playing:typeof player!=='undefined'&&player&&player.getPlayerState&&player.getPlayerState()===1,time:typeof player!=='undefined'&&player&&player.getCurrentTime?player.getCurrentTime():0,challenge:false})"
         } else {
-            script = """
-            (()=>{const v=document.querySelector('video');const t=(document.body.innerText||'').toLowerCase();
-            return {playing:!!(v&&!v.paused&&v.readyState>=2&&v.videoWidth>0),time:v?v.currentTime:0,
-            challenge:t.includes('sign in to confirm')||t.includes('确认你不是')||t.includes('確認您不是')||t.includes('確認你不是')};})()
-            """
+            guard let observation = try? String(contentsOfFile: "scripts/fixtures/PlaybackObservation.js", encoding: .utf8) else {
+                finish("probe_configuration_error"); return
+            }
+            script = observation
         }
         webView.requestMediaPlaybackState { [weak self] state in
             guard let self, !self.finished else { return }
@@ -80,7 +79,7 @@ final class PlaybackProbe: NSObject, NSApplicationDelegate, WKNavigationDelegate
                 let current = sample["time"] as? Double ?? 0
                 self.samples.append(["seconds": Int(Date().timeIntervalSince(self.started)), "webkitState": state.rawValue,
                                      "playing": playing, "mediaTime": current])
-                if sample["challenge"] as? Bool == true { self.finish("youtube_verification_required"); return }
+                if sample["verificationRequired"] as? Bool == true { self.finish("youtube_verification_required"); return }
                 if playing, let previous = self.previousTime, current > previous + 0.5 { self.advancingSamples += 1 }
                 else { self.advancingSamples = 0 }
                 self.previousTime = current

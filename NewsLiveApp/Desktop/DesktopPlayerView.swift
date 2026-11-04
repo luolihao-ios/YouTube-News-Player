@@ -7,7 +7,7 @@ struct DesktopPlayerView: View {
     @AppStorage("playerConsent.v1") private var playerConsent = false
     @StateObject private var session = PlayerSession()
     @State private var playerError: String?
-    @State private var playbackMessage = "點擊 YouTube 播放按鈕開始收看"
+    @State private var isPlaying = false
     @State private var reload = 0
     @State private var detailTab = 0
     @State private var selectedVideoID: String?
@@ -30,15 +30,11 @@ struct DesktopPlayerView: View {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 22) {
                             channelInfo
-                            if let error = playerError ?? store.errors[channel.id] {
-                                VStack(alignment: .leading, spacing: 10) {
-                                    Label(error, systemImage: "exclamationmark.triangle").font(.subheadline).foregroundStyle(.secondary)
-                                    HStack {
-                                        Button("重新載入") { retry() }.buttonStyle(.bordered)
-                                        Button("選擇其他頻道") { closePlayer() }.buttonStyle(.bordered)
-                                    }
-                                    Link("在 YouTube 直接觀看", destination: video?.watchURL ?? channel.channelURL)
-                                    ShareLink(item: PlaybackDiagnostics.shared.fileURL) { Label("匯出播放診斷", systemImage: "square.and.arrow.up") }
+                            if playerError != nil || store.errors[channel.id] != nil {
+                                HStack {
+                                    Text("暫時無法播放").font(.subheadline).foregroundStyle(.secondary)
+                                    Spacer()
+                                    Button("重試") { retry() }.buttonStyle(.bordered)
                                 }.padding(16).frame(maxWidth: .infinity, alignment: .leading)
                                     .background(Color.newsSurface, in: RoundedRectangle(cornerRadius: 13))
                             }
@@ -68,13 +64,10 @@ struct DesktopPlayerView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button { closePlayer() } label: { Label("返回", systemImage: "chevron.left") }
                 }
-                ToolbarItem(placement: .primaryAction) {
-                    Link(destination: video?.watchURL ?? channel.channelURL) { Label("在 YouTube 直接觀看", systemImage: "arrow.up.right.square") }
-                }
             }
         }
         .task(id: channel.id) {
-            session.pause(); playerError = nil
+            session.pause(); playerError = nil; isPlaying = false
             await store.refresh(channel)
         }
         .onChange(of: scenePhase) { _, phase in if phase != .active { session.pause() } }
@@ -88,7 +81,7 @@ struct DesktopPlayerView: View {
             VStack(spacing: 14) {
                 Image(systemName: "play.rectangle").font(.system(size: 38, weight: .light))
                 Text("使用 YouTube 官方播放器").font(.headline)
-                Text("載入後會連線至 YouTube / Google。同意後在本 App 保存 YouTube 播放 Cookie 與網站資料，可在設定清除；不與 Safari 共用登入。")
+                Text("載入會連線至 YouTube / Google，並在本 App 保存網站資料，可於設定清除。")
                     .font(.subheadline).foregroundStyle(.white.opacity(0.72)).multilineTextAlignment(.center)
                 HStack(spacing: 20) {
                     Link("Google 隱私政策", destination: URL(string: "https://policies.google.com/privacy")!)
@@ -98,16 +91,15 @@ struct DesktopPlayerView: View {
         } else if let video {
             YouTubeWebView(videoID: video.id, session: session) { event in
                 switch event {
-                case .ready: playerError = nil; playbackMessage = "點擊 YouTube 播放按鈕開始收看"
+                case .ready: playerError = nil; isPlaying = false
                 case .state(let state):
-                    switch state {
-                    case 1: playerError = nil; playbackMessage = "正在播放・YouTube"; store.didStartPlaying(channel)
-                    case 2: playbackMessage = "已暫停"
-                    case 0: playbackMessage = "直播已結束，可更新以查詢最新直播"
-                    case 3: playbackMessage = "YouTube 正在緩衝…"
-                    default: break
+                    isPlaying = state == 1
+                    if isPlaying {
+                        playerError = nil
+                        store.didStartPlaying(channel)
                     }
-                case .failed(let message): playerError = message; playbackMessage = "播放未開始，請查看下方提示"
+                case .failed(let message): playerError = message; isPlaying = false
+                case .webPlaybackRequired: playerError = PlayerFailure.verificationMessage; isPlaying = false
                 }
             }.id("\(channel.id)-\(video.id)-\(reload)")
         } else {
@@ -117,9 +109,8 @@ struct DesktopPlayerView: View {
                     Text("正在尋找直播…")
                 } else {
                     Image(systemName: "video.slash").font(.system(size: 34, weight: .light))
-                    Text(AppConfiguration.isConfigured ? "目前沒有可嵌入的公開直播" : "YouTube 服務尚未設定").font(.headline)
-                    Text("可前往頻道頁確認最新節目").font(.subheadline).foregroundStyle(.white.opacity(0.7))
-                    Link("在 YouTube 直接觀看", destination: channel.channelURL).buttonStyle(.bordered)
+                    Text("暫時沒有直播").font(.headline)
+                    Button("更新直播") { retry() }.buttonStyle(.bordered)
                 }
             }.foregroundStyle(.white).padding(24).frame(maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -141,7 +132,7 @@ struct DesktopPlayerView: View {
                     if let viewers = video.viewerText { Label(viewers, systemImage: "person") }
                     Text("資料更新於 \(video.fetchedAt.formatted(date: .omitted, time: .shortened))")
                 }.font(.caption).foregroundStyle(.secondary)
-                Text(playbackMessage).font(.caption).foregroundStyle(.secondary)
+                if isPlaying { Text("正在播放").font(.caption).foregroundStyle(.secondary) }
             }
         }
     }
@@ -154,7 +145,7 @@ struct DesktopPlayerView: View {
                         session.pause()
                         selectedVideoID = next.id
                         playerError = nil
-                        playbackMessage = "點擊 YouTube 播放按鈕開始收看"
+                        isPlaying = false
                     } label: {
                         if video?.id == next.id { Label(next.title, systemImage: "checkmark") }
                         else { Text(next.title) }
@@ -173,7 +164,7 @@ struct DesktopPlayerView: View {
                 Text(video?.title ?? "目前未提供直播資訊").font(.headline)
                 Text(video.map { $0.description.isEmpty ? "頻道未提供直播說明。" : $0.description } ?? "頻道未提供直播說明。")
                     .font(.subheadline).foregroundStyle(.secondary).textSelection(.enabled)
-                Text("畫質、字幕與全螢幕請使用 YouTube 官方播放器中的控制項。直播可能因地區或頻道設定而無法內嵌。")
+                Text("畫質、字幕與全螢幕可在播放器中設定。")
                     .font(.footnote).foregroundStyle(.secondary)
             }
         case 1:
@@ -182,7 +173,6 @@ struct DesktopPlayerView: View {
                 Text(channel.subtitle).foregroundStyle(.secondary)
                 Text("本 App 提供獨立的頻道整理與個人收藏功能，並非 YouTube 或各新聞媒體的官方 App。影音與頻道標識屬於各權利人。")
                     .font(.footnote).foregroundStyle(.secondary)
-                Link("在 YouTube 查看完整頻道", destination: channel.channelURL)
             }
         default:
             let related = store.channels.filter { $0.id != channel.id && $0.category == channel.category }
@@ -203,7 +193,7 @@ struct DesktopPlayerView: View {
         }
     }
     private func retry() {
-        session.pause(); playerError = nil; reload += 1
+        session.pause(); playerError = nil; isPlaying = false; reload += 1
         Task { await store.refresh(channel, force: true) }
     }
     private func closePlayer() {

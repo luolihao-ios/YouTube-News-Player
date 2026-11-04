@@ -1,7 +1,7 @@
 import SwiftUI
 import SafariServices
 
-/// 系统管理的备用网页入口；不读取网页内容、Cookie 或登录状态。
+/// 登录和观看始终留在系统管理的同一网页中，不读取或转移账户、Cookie。
 struct InAppYouTubeBrowser: UIViewControllerRepresentable {
     let url: URL
     let onClose: () -> Void
@@ -19,13 +19,14 @@ struct InAppYouTubeBrowser: UIViewControllerRepresentable {
 
     func updateUIViewController(_ controller: SFSafariViewController, context: Context) {}
 
+    @MainActor
     final class Coordinator: NSObject, SFSafariViewControllerDelegate {
         private let onClose: () -> Void
-
         init(onClose: @escaping () -> Void) { self.onClose = onClose }
-
-        func safariViewControllerDidFinish(_ controller: SFSafariViewController) {
-            onClose()
+        func safariViewControllerDidFinish(_ controller: SFSafariViewController) { onClose() }
+        func safariViewController(_ controller: SFSafariViewController, didCompleteInitialLoad didLoadSuccessfully: Bool) {
+            // 页面加载不代表已登录或已播放；系统不向 App 暴露这些状态。
+            PlaybackDiagnostics.shared.record("web_page_initial_load", fields: ["state": didLoadSuccessfully ? "loaded" : "failed"])
         }
     }
 }

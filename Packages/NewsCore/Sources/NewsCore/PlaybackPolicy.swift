@@ -7,7 +7,7 @@ public enum PlayerNavigationDecision: Equatable, Sendable {
     case cancel
 }
 
-/// 播放器只在使用者明確點擊時開啟外部頁面；身分驗證交由提示中的明確按鈕處理。
+/// 播放器只在使用者明確點擊時開啟外部頁面；身分驗證轉交平台支援的系統觀看流程。
 public enum PlayerNavigationPolicy {
     public static func decision(for url: URL?, isMainFrame: Bool, isUserActivated: Bool, opensNewWindow: Bool) -> PlayerNavigationDecision {
         guard let url else { return .cancel }
