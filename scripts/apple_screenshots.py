@@ -138,7 +138,7 @@ def require_complete(api, identity, wait_seconds):
         time.sleep(min(5, max(0, deadline - time.monotonic())))
 
 
-def upload(api, manifest_path, platform, locales, wait_seconds=180, report_path=None):
+def upload(api, manifest_path, platform, locales, wait_seconds=600, report_path=None):
     document = validate_manifest(manifest_path, platform, locales)
     app = store.find_app(api)
     if not app: raise ValueError('未找到同一 Bundle 的 Apple App 记录')
@@ -176,6 +176,7 @@ def upload(api, manifest_path, platform, locales, wait_seconds=180, report_path=
                     'attributes': {'screenshotDisplayType': plan['display']}, 'relationships': {'appStoreVersionLocalization':
                     {'data': {'type': 'appStoreVersionLocalizations', 'id': plan['localization']}}}}})['data']
             set_id = screenshot_set['id']; desired_ids = []
+            plan['set_id']=set_id; plan['desired_ids']=desired_ids
             for action in plan['actions']:
                 item = action['item']; identity = action['existing_id']
                 if not identity:
@@ -189,12 +190,18 @@ def upload(api, manifest_path, platform, locales, wait_seconds=180, report_path=
                     upload_chunks(path, asset['attributes'].get('uploadOperations', []))
                     api.call(f'appScreenshots/{identity}', 'PATCH', {'data': {'type': 'appScreenshots', 'id': identity,
                              'attributes': {'uploaded': True, 'sourceFileChecksum': item['md5']}}})
+                desired_ids.append(identity)
+        # Apple 异步处理。先完整上传本次图片，再等状态，避免第一张排队阻断其余素材。
+        for plan in plans:
+            set_id=plan['set_id']; desired_ids=plan['desired_ids']
+            for action,identity in zip(plan['actions'],desired_ids):
+                item=action['item']
                 asset = require_complete(api, identity, wait_seconds)
                 if asset['attributes'].get('sourceFileChecksum', '').lower() != item['md5'].lower():
                     raise RuntimeError('Apple 回读截图 MD5 不匹配')
                 entry = {'id': identity, 'locale': plan['locale'], 'set_id': set_id, 'state': 'COMPLETE', 'sha256': item['sha256']}
                 report['assets'] = [old for old in report['assets'] if old['id'] != identity] + [entry]
-                desired_ids.append(identity); save()
+                save()
             expected = plan['before'] + [identity for identity in desired_ids if identity not in plan['before']]
             current = [item['id'] for item in api.all(f'appScreenshotSets/{set_id}/appScreenshots?limit=200')]
             if set(current) != set(expected) or len(current) != len(expected):
@@ -218,7 +225,7 @@ def main():
     parser.add_argument('--manifest', required=True)
     parser.add_argument('--platform', required=True, choices=list(store.platforms()))
     parser.add_argument('--locale', action='append', choices=list(LOCALES))
-    parser.add_argument('--wait-seconds', type=int, default=180)
+    parser.add_argument('--wait-seconds', type=int, default=600)
     parser.add_argument('--report', default='build/apple-report/screenshots.json')
     args = parser.parse_args(); locales = args.locale or list(LOCALES)
     if not 0 <= args.wait_seconds <= 600: raise SystemExit('处理状态等待时间须为 0 至 600 秒')

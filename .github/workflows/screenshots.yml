@@ -17,12 +17,17 @@ on:
         description: 可选的实际构建版本；留空读取源配置；上传时必须匹配各平台草稿
         type: string
         default: ''
+      source_run_id:
+        description: 可选；复用本仓库已结束截图任务的原始素材，仅用于 capture-upload 重试
+        type: string
+        default: ''
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
-  group: youtubenewslive-store-screenshots
+  group: youtubenewslive-store-screenshots-${{ inputs.platform }}
   cancel-in-progress: false
 
 jobs:
@@ -38,17 +43,34 @@ jobs:
       - id: selection
         env:
           SELECTED_PLATFORM: ${{ inputs.platform }}
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+          CAPTURE_OPERATION: ${{ inputs.operation }}
+          CAPTURE_VERSION: ${{ inputs.version }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           python - <<'PY'
-          import json,os,sys
+          import json,os,re,subprocess,sys
           sys.path.insert(0,'scripts')
           import appstore
+          source=os.environ.get('SOURCE_RUN_ID','')
+          if source:
+              if not re.fullmatch(r'[0-9]+',source) or os.environ['CAPTURE_OPERATION']!='capture-upload' or os.environ.get('CAPTURE_VERSION'):
+                  raise SystemExit('复用必须指定数字 source_run_id、capture-upload 且不覆盖实际素材版本')
+              repository=os.environ['GITHUB_REPOSITORY']
+              def get(path): return json.loads(subprocess.check_output(['gh','api',path],text=True))
+              run=get(f'repos/{repository}/actions/runs/{source}')
+              if run.get('repository',{}).get('full_name')!=repository or run.get('status')!='completed':
+                  raise SystemExit('只复用同仓库已结束截图任务的素材')
+              workflow=get(f'repos/{repository}/actions/workflows/{run["workflow_id"]}')
+              if workflow.get('path')!='.github/workflows/screenshots.yml':
+                  raise SystemExit('来源不是本仓库截图工作流')
           appstore.output('platforms',json.dumps(appstore.selected_platforms([os.environ['SELECTED_PLATFORM']])))
           PY
 
   capture:
+    if: inputs.source_run_id == ''
     needs: selection
-    runs-on: macos-26
+    runs-on: ${{ matrix.platform == 'visionos' && 'macos-26' || 'macos-26-intel' }}
     timeout-minutes: 60
     strategy:
       fail-fast: false
@@ -123,6 +145,8 @@ jobs:
         with:
           name: YouTubeNewsLive-${{ matrix.platform }}-真实商店截图
           path: build/downloaded/${{ matrix.platform }}
+          run-id: ${{ inputs.source_run_id || github.run_id }}
+          github-token: ${{ github.token }}
       - name: 预检唯一平台草稿并追加；回读 COMPLETE 和有序关联
         env:
           SELECTED_PLATFORM: ${{ matrix.platform }}

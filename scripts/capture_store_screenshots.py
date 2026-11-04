@@ -123,11 +123,14 @@ def ensure_runtime(platform, download, destination):
     return runtime, data['devicetypes']
 
 
-def select_device_type(types, group):
+def select_device_type(types, group, runtime=None):
     if group == 'iphone': matches = [item for item in types if item['name'] == 'iPhone 17 Pro Max']
     elif group == 'ipad': matches = [item for item in types if 'iPad Pro' in item['name'] and '13-inch' in item['name']]
     else: matches = [item for item in types if 'Apple Vision Pro' in item['name']]
-    if not matches: raise ValueError('未找到所需真实模拟设备类型: ' + group)
+    if runtime is not None:
+        supported={item['identifier'] for item in runtime.get('supportedDeviceTypes',[])}
+        matches=[item for item in matches if item['identifier'] in supported]
+    if not matches: raise ValueError('未找到与所选 runtime 兼容的真实模拟设备类型: ' + group)
     return matches[-1]
 
 
@@ -213,7 +216,7 @@ def capture_mac(executable, destination, locales, settle):
 def capture_simulator(app, platform, destination, locales, settle, runtime, types):
     images = []
     for group in (('iphone', 'ipad') if platform == 'ios' else ('vision',)):
-        device_type = select_device_type(types, group)
+        device_type = select_device_type(types, group, runtime)
         udid = run(['xcrun', 'simctl', 'create', 'NewsLive-Capture-' + uuid.uuid4().hex[:12],
                     device_type['identifier'], runtime['identifier']], capture=True, timeout=120).strip()
         if not re.fullmatch(r'[0-9A-Fa-f-]{36}', udid): raise ValueError('simctl 没有返回有效设备 UUID')

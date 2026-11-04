@@ -93,11 +93,12 @@ struct HomeView: View {
         let snapshot = store.snapshots[channel.id]
         let video = snapshot?.videos.first
         return Button { store.open(channel) } label: {
+            GeometryReader { geometry in
             ZStack(alignment: .bottomLeading) {
                 LinearGradient(colors: [Color(newsHex: channel.color).opacity(0.85), Color(newsHex: channel.color).opacity(0.5), Color(red: 0.05, green: 0.10, blue: 0.22)], startPoint: .topLeading, endPoint: .bottomTrailing)
                 if let video {
                     AsyncImage(url: video.thumbnailURL) { image in image.resizable().scaledToFill() } placeholder: { Color.clear }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity).clipped()
+                        .frame(width: geometry.size.width, height: geometry.size.height).clipped()
                 } else {
                     HStack {
                         Spacer()
@@ -114,10 +115,11 @@ struct HomeView: View {
                     Spacer()
                     Image(systemName: "play.fill").font(.system(size: 17)).frame(width: 43, height: 43).background(.white.opacity(0.12), in: Circle()).overlay { Circle().stroke(.white.opacity(0.9), lineWidth: 1.5) }
                 }.foregroundStyle(.white).padding(18)
-            }.overlay(alignment: .topTrailing) {
+            }.frame(width: geometry.size.width, height: geometry.size.height).overlay(alignment: .topTrailing) {
                 if video != nil { LiveBadge(cached: snapshot?.isFresh != true).padding(13) }
                 else { Text("精選頻道").font(.system(size: 11, weight: .medium)).foregroundStyle(.white).padding(7).background(.black.opacity(0.15), in: Capsule()).padding(13) }
             }.clipShape(RoundedRectangle(cornerRadius: 17))
+            }
         }.buttonStyle(.plain)
     }
 

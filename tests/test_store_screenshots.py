@@ -52,6 +52,14 @@ class ScreenshotTests(unittest.TestCase):
             self.capture.select_runtime(items, 'ios')
         self.assertEqual(self.capture.select_runtime(items, 'visionos')['identifier'], items[1]['identifier'])
 
+    def test_device_type_must_be_supported_by_selected_runtime(self):
+        types=[{'name':'Apple Vision Pro','identifier':'vision-new'},
+               {'name':'Apple Vision Pro (at 2732x2048)','identifier':'vision-old'}]
+        runtime={'supportedDeviceTypes':[{'identifier':'vision-new'}]}
+        self.assertEqual(self.capture.select_device_type(types,'vision',runtime)['identifier'],'vision-new')
+        with self.assertRaisesRegex(ValueError,'兼容'):
+            self.capture.select_device_type(types,'vision',{'supportedDeviceTypes':[]})
+
     def test_arguments_only_select_real_tab_and_language(self):
         self.assertEqual(self.capture.launch_arguments('favorites', 'zh-Hans'),
                          ['--capture-tab', 'favorites', '-AppleLanguages', '(zh-Hans)', '-AppleLocale', 'zh_CN'])
@@ -133,6 +141,33 @@ class ScreenshotTests(unittest.TestCase):
         path, _ = self.manifest(); api = FakeAPI('1.0', 'UPLOAD_COMPLETE')
         with patch.object(self.upload, 'upload_chunks'), self.assertRaisesRegex(RuntimeError, 'UPLOAD_COMPLETE'):
             self.upload.upload(api, path, 'macos', ['en-US'], wait_seconds=0)
+
+    def test_all_images_are_uploaded_before_waiting_for_apple_processing(self):
+        path,document=self.manifest()
+        second=self.capture.prepare_image(self.root/'raw.png',self.root,'macos','en-US','mac','channels',
+                                          {'method':'screencapture-window','pid':42})
+        document['screenshots'].append(second); path.write_text(json.dumps(document),encoding='utf8')
+        class BatchAPI(FakeAPI):
+            def call(self,path,method='GET',data=None):
+                if path=='appScreenshots' and method=='POST':
+                    self.calls.append((path,method,data))
+                    asset={'id':str(len(self.assets)),'attributes':{**data['data']['attributes'],'sourceFileChecksum':'',
+                           'assetDeliveryState':{'state':'COMPLETE'},'uploadOperations':[]}}
+                    self.assets.append(asset); return {'data':asset}
+                if path.startswith('appScreenshots/'):
+                    self.calls.append((path,method,data))
+                    asset=next(a for a in self.assets if a['id']==path.split('/')[1])
+                    if method=='PATCH': asset['attributes'].update(data['data']['attributes'])
+                    else:
+                        if len(self.assets)!=2 or not all(a['attributes'].get('uploaded') for a in self.assets):
+                            raise AssertionError('不能等第一张处理完成后才上传后续图片')
+                    return {'data':asset}
+                return super().call(path,method,data)
+        api=BatchAPI('1.0')
+        with patch.object(self.upload,'upload_chunks'):
+            result=self.upload.upload(api,path,'macos',['en-US'],wait_seconds=0)
+        self.assertEqual(len(result['assets']),2)
+        self.assertTrue(result['complete'])
 
     def test_invalid_chunk_coverage_and_insecure_url_fail_before_network(self):
         path = self.root / 'chunk.bin'; path.write_bytes(b'0123456789')

@@ -4,17 +4,20 @@ import os
 from pathlib import Path
 import plistlib
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
 import zipfile
+
+ROOT=Path(__file__).resolve().parents[1]
+if (ROOT/'.test-tools').is_dir(): sys.path.insert(0,str(ROOT/'.test-tools'))
+
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.serialization import pkcs12
 from cryptography.x509.oid import NameOID
-
-ROOT=Path(__file__).resolve().parents[1]
 
 class ReleaseTests(unittest.TestCase):
     def load(self):
