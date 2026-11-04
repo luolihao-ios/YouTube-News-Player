@@ -227,6 +227,21 @@ class ScreenshotTests(unittest.TestCase):
         with patch.object(self.capture.os, 'kill'), patch.object(self.capture, 'run', return_value=str(executable) + ' --capture-tab home'):
             self.capture.verify_process(42, executable)
 
+    def test_ios_boot_does_not_depend_on_launchservices_simulator_window(self):
+        with patch.object(self.capture,'run') as run:
+            self.capture.boot_simulator('device-id','ios')
+        commands=[call.args[0] for call in run.call_args_list]
+        self.assertIn(['xcrun','simctl','boot','device-id'],commands)
+        self.assertIn(['xcrun','simctl','bootstatus','device-id','-b'],commands)
+        self.assertFalse(any(command[0]=='open' for command in commands))
+
+    def test_vision_boot_keeps_spatial_simulator_window(self):
+        with patch.object(self.capture,'run') as run:
+            self.capture.boot_simulator('device-id','visionos')
+        commands=[call.args[0] for call in run.call_args_list]
+        self.assertIn(['open','-a','Simulator','--args','-CurrentDeviceUDID','device-id'],commands)
+        self.assertIn(['xcrun','simctl','bootstatus','device-id','-b'],commands)
+
     def test_workflow_manifest_requires_all_four_pages(self):
         _, document = self.manifest()
         with self.assertRaisesRegex(ValueError, '不完整'):

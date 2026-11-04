@@ -42,7 +42,7 @@ jobs:
           PY
   build:
     needs: static
-    runs-on: macos-26-intel
+    runs-on: ${{ matrix.platform == 'visionos' && 'macos-26' || 'macos-26-intel' }}
     timeout-minutes: 25
     strategy:
       fail-fast: false

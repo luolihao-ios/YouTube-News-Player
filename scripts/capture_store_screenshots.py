@@ -213,6 +213,14 @@ def capture_mac(executable, destination, locales, settle):
     return images
 
 
+def boot_simulator(udid, platform):
+    run(['xcrun','simctl','boot',udid],timeout=180)
+    # iOS 的 simctl 可直接启动与采集，无需等待 LaunchServices 打开桌面窗口。
+    if platform=='visionos':
+        run(['open','-a','Simulator','--args','-CurrentDeviceUDID',udid],timeout=30)
+    run(['xcrun','simctl','bootstatus',udid,'-b'],timeout=300)
+
+
 def capture_simulator(app, platform, destination, locales, settle, runtime, types):
     images = []
     for group in (('iphone', 'ipad') if platform == 'ios' else ('vision',)):
@@ -221,9 +229,7 @@ def capture_simulator(app, platform, destination, locales, settle, runtime, type
                     device_type['identifier'], runtime['identifier']], capture=True, timeout=120).strip()
         if not re.fullmatch(r'[0-9A-Fa-f-]{36}', udid): raise ValueError('simctl 没有返回有效设备 UUID')
         try:
-            run(['xcrun', 'simctl', 'boot', udid], timeout=180)
-            run(['open', '-a', 'Simulator', '--args', '-CurrentDeviceUDID', udid], timeout=30)
-            run(['xcrun', 'simctl', 'bootstatus', udid, '-b'], timeout=300)
+            boot_simulator(udid,platform)
             run(['xcrun', 'simctl', 'install', udid, app], timeout=180)
             installed_app = Path(run(['xcrun', 'simctl', 'get_app_container', udid, store.BUNDLE, 'app'], capture=True, timeout=30).strip())
             installed_info = plistlib.loads((installed_app / 'Info.plist').read_bytes())
