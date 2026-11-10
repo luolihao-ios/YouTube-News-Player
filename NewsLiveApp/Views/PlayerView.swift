@@ -33,10 +33,7 @@ struct PlayerView: View {
                                     Text("暫時無法播放").font(.subheadline).foregroundStyle(.secondary)
                                     Spacer()
                                     if playerError != nil {
-                                        Button("Google 登入") {
-                                            session.pause()
-                                            showingSignIn = true
-                                        }.buttonStyle(.bordered)
+                                        Button("Google 登入", action: showSignIn).buttonStyle(.bordered)
                                     }
                                     Button("重試") { retry() }.buttonStyle(.bordered)
                                 }.padding(14).frame(maxWidth: .infinity, alignment: .leading).background(Color.newsBackground, in: RoundedRectangle(cornerRadius: 12))
@@ -92,7 +89,7 @@ struct PlayerView: View {
                 }
             }.foregroundStyle(.white).padding(20).frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if let video, let hasSession {
-            YouTubeWebView(videoID: video.id, session: session, signedIn: hasSession) { event in
+            YouTubeWebView(videoID: video.id, session: session, signedIn: hasSession, onSignInRequested: showSignIn) { event in
                 switch event {
                 case .ready: isPlaying = false; playerError = nil
                 case .state(let value):
@@ -202,5 +199,10 @@ struct PlayerView: View {
     private func closePlayer() {
         session.pause()
         store.activeChannel = nil
+    }
+    private func showSignIn() {
+        guard !showingSignIn else { return }
+        session.pause()
+        showingSignIn = true
     }
 }

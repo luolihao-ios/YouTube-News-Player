@@ -89,6 +89,23 @@ final class PlaybackPolicyTests: XCTestCase {
         XCTAssertTrue(YouTubeSignInPolicy.isYouTubeReturn(URL(string: "https://www.youtube.com/?app=desktop")))
     }
 
+    func testMobileSignInStartsAtGoogleAndReturnsThroughYouTube() throws {
+        let entry = try XCTUnwrap(URLComponents(url: YouTubeSignInPolicy.entryURL, resolvingAgainstBaseURL: false))
+        XCTAssertEqual(entry.scheme, "https")
+        XCTAssertEqual(entry.host, "accounts.google.com")
+        XCTAssertEqual(entry.path, "/ServiceLogin")
+        XCTAssertEqual(entry.queryItems?.first(where: { $0.name == "service" })?.value, "youtube")
+        let callback = try XCTUnwrap(entry.queryItems?.first(where: { $0.name == "continue" })?.value)
+        let destination = try XCTUnwrap(URLComponents(string: callback))
+        XCTAssertEqual(destination.host, "m.youtube.com")
+        XCTAssertEqual(destination.path, "/signin")
+        XCTAssertEqual(destination.queryItems?.first(where: { $0.name == "action_handle_signin" })?.value, "true")
+        XCTAssertEqual(destination.queryItems?.first(where: { $0.name == "next" })?.value, "/")
+        XCTAssertEqual(destination.queryItems?.first(where: { $0.name == "noapp" })?.value, "1")
+        XCTAssertTrue(YouTubeSignInPolicy.allows(destination.url, isMainFrame: true))
+        XCTAssertFalse(YouTubeSignInPolicy.isYouTubeReturn(destination.url))
+    }
+
     func testOnlyCurrentSecureYouTubeSessionMarkerCounts() throws {
         func cookie(_ domain: String, name: String = "LOGIN_INFO", secure: Bool = true, expires: Date? = nil) throws -> HTTPCookie {
             var properties: [HTTPCookiePropertyKey: Any] = [.name: name, .value: "test-value", .domain: domain, .path: "/"]

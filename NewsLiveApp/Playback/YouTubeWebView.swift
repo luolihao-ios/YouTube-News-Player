@@ -38,9 +38,12 @@ struct YouTubeWebView: NativePlayerRepresentable {
     let videoID: String
     let session: PlayerSession
     var signedIn = false
+    var onSignInRequested: (() -> Void)?
     let onEvent: (PlayerEvent) -> Void
 
-    func makeCoordinator() -> Coordinator { Coordinator(session: session, videoID: videoID, signedIn: signedIn, onEvent: onEvent) }
+    func makeCoordinator() -> Coordinator {
+        Coordinator(session: session, videoID: videoID, signedIn: signedIn, onSignInRequested: onSignInRequested, onEvent: onEvent)
+    }
     #if os(macOS)
     func makeNSView(context: Context) -> WKWebView { makeWebView(context: context) }
     func updateNSView(_ nsView: WKWebView, context: Context) {}
@@ -114,13 +117,15 @@ struct YouTubeWebView: NativePlayerRepresentable {
         weak var session: PlayerSession?
         let videoID: String
         let signedIn: Bool
+        private let onSignInRequested: (() -> Void)?
         private let diagnosticID: String
         var timeout: Task<Void, Never>?
         var observation: Task<Void, Never>?
         var observationScript: String?
         private var failureReported = false
-        init(session: PlayerSession, videoID: String, signedIn: Bool, onEvent: @escaping (PlayerEvent) -> Void) {
+        init(session: PlayerSession, videoID: String, signedIn: Bool, onSignInRequested: (() -> Void)?, onEvent: @escaping (PlayerEvent) -> Void) {
             self.session = session; self.videoID = videoID; self.signedIn = signedIn; self.onEvent = onEvent; diagnosticID = session.diagnosticID
+            self.onSignInRequested = onSignInRequested
         }
         func record(_ event: String, fields: [String: String] = [:]) {
             var context = fields; context["videoID"] = videoID; context["session"] = diagnosticID
@@ -245,7 +250,8 @@ struct YouTubeWebView: NativePlayerRepresentable {
             switch decision {
             case .allow: decisionHandler(.allow)
             case .verificationRequired:
-                decisionHandler(.cancel); fail(PlayerFailure.verificationMessage)
+                decisionHandler(.cancel)
+                handleVerification(action)
             case .openExternal:
                 if let url = action.request.url { openExternal(url) }
                 decisionHandler(.cancel)
@@ -256,9 +262,16 @@ struct YouTubeWebView: NativePlayerRepresentable {
             let decision = PlayerNavigationPolicy.decision(for: action.request.url, isMainFrame: true,
                 isUserActivated: action.navigationType == .linkActivated, opensNewWindow: true)
             recordNavigation(action, decision: decision)
-            if decision == .verificationRequired { fail(PlayerFailure.verificationMessage) }
+            if decision == .verificationRequired { handleVerification(action) }
             else if decision == .openExternal, let url = action.request.url { openExternal(url) }
             return nil
+        }
+        private func handleVerification(_ action: WKNavigationAction) {
+            fail(PlayerFailure.verificationMessage)
+            if action.navigationType == .linkActivated, let onSignInRequested {
+                record("player_sign_in_tapped")
+                onSignInRequested()
+            }
         }
         private func recordNavigation(_ action: WKNavigationAction, decision: PlayerNavigationDecision) {
             let url = action.request.url

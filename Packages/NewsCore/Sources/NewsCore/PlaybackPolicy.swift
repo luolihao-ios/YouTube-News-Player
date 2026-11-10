@@ -69,7 +69,15 @@ public enum YouTubeSignInPolicy {
     private static let youtubeHosts = ["youtube.com", "www.youtube.com", "m.youtube.com"]
     private static let signInHosts = ["accounts.google.com", "accounts.youtube.com", "consent.google.com", "consent.youtube.com"]
 
-    public static let entryURL = URL(string: "https://www.youtube.com/signin")!
+    public static let entryURL: URL = {
+        // 使用 YouTube 手机版登入所指向的 Google 入口，保留 YouTube 的会话回调。
+        var entry = URLComponents(string: "https://accounts.google.com/ServiceLogin")!
+        entry.queryItems = [
+            URLQueryItem(name: "service", value: "youtube"),
+            URLQueryItem(name: "continue", value: "https://m.youtube.com/signin?action_handle_signin=true&app=m&next=%2F&noapp=1")
+        ]
+        return entry.url!
+    }()
 
     public static func allows(_ url: URL?, isMainFrame: Bool) -> Bool {
         if !isMainFrame, url?.absoluteString == "about:blank" { return true }

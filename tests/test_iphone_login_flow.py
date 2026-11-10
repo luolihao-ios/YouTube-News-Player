@@ -29,6 +29,15 @@ class IPhoneLoginFlowTests(unittest.TestCase):
         self.assertIn("webView.load(config.embedRequest)", player)
         self.assertIn('"direct_media_playing"', player)
 
+    def test_official_player_login_tap_and_loading_state_stay_in_app(self):
+        player = source("NewsLiveApp/Playback/YouTubeWebView.swift")
+        self.assertIn("action.navigationType == .linkActivated, let onSignInRequested", player)
+        self.assertIn("onSignInRequested: showSignIn", source("NewsLiveApp/Views/PlayerView.swift"))
+        sign_in = source("NewsLiveApp/Views/YouTubeSignInView.swift")
+        self.assertIn("didStartProvisionalNavigation", sign_in)
+        self.assertIn('"youtube_sign_in_timeout"', sign_in)
+        self.assertIn("NSURLErrorFailingURLErrorKey", sign_in)
+
 
 if __name__ == "__main__":
     unittest.main()
