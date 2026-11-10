@@ -65,7 +65,7 @@ final class PlaybackProbe: NSObject, NSApplicationDelegate, WKNavigationDelegate
         if mode == "wrapper" {
             script = "({playing:typeof player!=='undefined'&&player&&player.getPlayerState&&player.getPlayerState()===1,time:typeof player!=='undefined'&&player&&player.getCurrentTime?player.getCurrentTime():0,challenge:false})"
         } else {
-            guard let observation = try? String(contentsOfFile: "scripts/fixtures/PlaybackObservation.js", encoding: .utf8) else {
+            guard let observation = try? String(contentsOfFile: "NewsLiveApp/Resources/PlaybackObservation.js", encoding: .utf8) else {
                 finish("probe_configuration_error"); return
             }
             script = observation

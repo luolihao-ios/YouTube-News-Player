@@ -152,6 +152,12 @@ public struct PlayerConfiguration: Sendable {
         request.setValue(origin.absoluteString, forHTTPHeaderField: "Referer")
         return request
     }
+    public var embedRequest: URLRequest {
+        let url = URL(string: "https://www.youtube.com/embed/\(videoID)?playsinline=1")!
+        var request = URLRequest(url: url)
+        request.setValue(origin.absoluteString, forHTTPHeaderField: "Referer")
+        return request
+    }
 }
 
 public enum AppVersion {

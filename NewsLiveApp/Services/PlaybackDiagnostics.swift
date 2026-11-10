@@ -41,6 +41,14 @@ final class PlaybackDiagnostics {
 enum PlayerWebData {
     static let store = WKWebsiteDataStore.default()
 
+    static func hasYouTubeSession() async -> Bool {
+        await withCheckedContinuation { continuation in
+            store.httpCookieStore.getAllCookies { cookies in
+                continuation.resume(returning: YouTubeSignInPolicy.hasSession(cookies))
+            }
+        }
+    }
+
     static func clear() async {
         PlayerSession.pauseCurrent()
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in

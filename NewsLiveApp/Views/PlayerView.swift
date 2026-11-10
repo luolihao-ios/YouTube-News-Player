@@ -12,6 +12,8 @@ struct PlayerView: View {
     @State private var playerError: String?
     @State private var reload = 0
     @State private var selectedVideoID: String?
+    @State private var showingSignIn = false
+    @State private var hasSession: Bool?
     private var snapshot: ChannelSnapshot? { store.snapshots[channel.id] }
     private var video: LiveVideo? {
         snapshot?.videos.first(where: { $0.id == selectedVideoID }) ?? snapshot?.videos.first
@@ -30,6 +32,12 @@ struct PlayerView: View {
                                 HStack {
                                     Text("暫時無法播放").font(.subheadline).foregroundStyle(.secondary)
                                     Spacer()
+                                    if playerError != nil {
+                                        Button("Google 登入") {
+                                            session.pause()
+                                            showingSignIn = true
+                                        }.buttonStyle(.bordered)
+                                    }
                                     Button("重試") { retry() }.buttonStyle(.bordered)
                                 }.padding(14).frame(maxWidth: .infinity, alignment: .leading).background(Color.newsBackground, in: RoundedRectangle(cornerRadius: 12))
                             }
@@ -52,12 +60,22 @@ struct PlayerView: View {
             }
             .task(id: channel.id) {
                 session.pause(); playerError = nil; isPlaying = false
+                let present = await PlayerWebData.hasYouTubeSession()
+                guard !Task.isCancelled else { return }
+                hasSession = present
+                PlaybackDiagnostics.shared.record("playback_session_checked", fields: ["sessionPresent": String(present)])
                 await store.refresh(channel)
             }
             .onChange(of: scenePhase) { _, phase in if phase != .active { session.pause() } }
             .onChange(of: store.activeChannel?.id) { _, id in if id != channel.id { session.pause() } }
             .onChange(of: playerConsent) { _, consent in if !consent { session.pause() } }
             .onDisappear { session.pause() }
+            .fullScreenCover(isPresented: $showingSignIn) {
+                YouTubeSignInView {
+                    hasSession = true
+                    retry()
+                }
+            }
         }
     }
 
@@ -73,8 +91,8 @@ struct PlayerView: View {
                     Button("同意並載入") { playerConsent = true }.font(.system(size: 13, weight: .semibold)).buttonStyle(.borderedProminent)
                 }
             }.foregroundStyle(.white).padding(20).frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else if let video {
-            YouTubeWebView(videoID: video.id, session: session) { event in
+        } else if let video, let hasSession {
+            YouTubeWebView(videoID: video.id, session: session, signedIn: hasSession) { event in
                 switch event {
                 case .ready: isPlaying = false; playerError = nil
                 case .state(let value):
@@ -85,10 +103,10 @@ struct PlayerView: View {
                     }
                 case .failed(let message): playerError = message; isPlaying = false
                 }
-            }.id("\(channel.id)-\(video.id)-\(reload)")
+            }.id("\(channel.id)-\(video.id)-\(hasSession)-\(reload)")
         } else {
             VStack(spacing: 12) {
-                if store.loading.contains(channel.id) { ProgressView().tint(.white); Text("正在尋找直播…") }
+                if hasSession == nil || store.loading.contains(channel.id) { ProgressView().tint(.white); Text("正在尋找直播…") }
                 else {
                     Image(systemName: "video.slash").font(.system(size: 30, weight: .light))
                     Text("暫時沒有直播").font(.headline)

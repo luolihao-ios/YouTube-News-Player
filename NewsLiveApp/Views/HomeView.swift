@@ -5,6 +5,7 @@ struct HomeView: View {
     @EnvironmentObject private var store: NewsStore
     @State private var category: ChannelCategory?
     @State private var heroIndex = 0
+    @State private var showingSignIn = false
     @AppStorage("historyEnabled") private var historyEnabled = false
     private var visible: [ChannelSeed] { ChannelFilter.apply(store.channels, query: "", category: category) }
     private var categoryLive: [ChannelSeed] { store.liveChannels.filter { category == nil || $0.category == category } }
@@ -16,6 +17,10 @@ struct HomeView: View {
             ScrollView {
                 VStack(spacing: 22) {
                     header.padding(.horizontal, 20)
+                    Button { showingSignIn = true } label: {
+                        Label("Google 登入", systemImage: "person.crop.circle")
+                            .frame(maxWidth: .infinity)
+                    }.buttonStyle(.bordered).padding(.horizontal, 20)
                     CategoryPicker(selection: $category, allTitle: "推薦")
                     if let message = store.catalogError {
                         MessageCard(symbol: "exclamationmark.triangle", title: "無法載入頻道", message: message).padding(.horizontal, 20)
@@ -61,6 +66,7 @@ struct HomeView: View {
             .toolbar(.hidden, for: .navigationBar)
             .refreshable { await store.refresh(Array(visible.prefix(3)), force: true) }
             .onChange(of: category) { _, _ in heroIndex = 0 }
+            .fullScreenCover(isPresented: $showingSignIn) { YouTubeSignInView(onSignedIn: {}) }
         }
     }
 

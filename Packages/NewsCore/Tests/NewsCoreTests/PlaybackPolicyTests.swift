@@ -75,4 +75,37 @@ final class PlaybackPolicyTests: XCTestCase {
         XCTAssertTrue(PlayerFailure.message(for: 987).contains("987"))
         XCTAssertTrue(PlayerFailure.verificationMessage.contains("不會同步"))
     }
+
+    func testDedicatedSignInAllowsOnlyOfficialHTTPSNavigation() {
+        for address in ["https://www.youtube.com/signin", "https://accounts.google.com/v3/signin/identifier", "https://accounts.youtube.com/accounts/SetSID", "https://consent.youtube.com/"] {
+            XCTAssertTrue(YouTubeSignInPolicy.allows(URL(string: address), isMainFrame: true), address)
+        }
+        for address in ["http://accounts.google.com/", "https://accounts.google.com.evil.test/", "https://evil.test@www.youtube.com/", "https://www.youtube.com:444/", "https://www.google.com/recaptcha/api2/anchor", "javascript:alert(1)"] {
+            XCTAssertFalse(YouTubeSignInPolicy.allows(URL(string: address), isMainFrame: true), address)
+        }
+        XCTAssertTrue(YouTubeSignInPolicy.allows(URL(string: "https://www.google.com/recaptcha/api2/anchor"), isMainFrame: false))
+        XCTAssertFalse(YouTubeSignInPolicy.isYouTubeReturn(YouTubeSignInPolicy.entryURL))
+        XCTAssertFalse(YouTubeSignInPolicy.isYouTubeReturn(URL(string: "https://accounts.google.com/")))
+        XCTAssertTrue(YouTubeSignInPolicy.isYouTubeReturn(URL(string: "https://www.youtube.com/?app=desktop")))
+    }
+
+    func testOnlyCurrentSecureYouTubeSessionMarkerCounts() throws {
+        func cookie(_ domain: String, name: String = "LOGIN_INFO", secure: Bool = true, expires: Date? = nil) throws -> HTTPCookie {
+            var properties: [HTTPCookiePropertyKey: Any] = [.name: name, .value: "test-value", .domain: domain, .path: "/"]
+            if secure { properties[.secure] = "TRUE" }
+            if let expires { properties[.expires] = expires }
+            return try XCTUnwrap(HTTPCookie(properties: properties))
+        }
+        let now = Date()
+        XCTAssertFalse(YouTubeSignInPolicy.hasSession([]))
+        XCTAssertFalse(YouTubeSignInPolicy.hasSession([
+            try cookie(".youtube.com", name: "VISITOR_INFO1_LIVE"),
+            try cookie(".youtube.com", secure: false),
+            try cookie(".youtube.com", expires: now.addingTimeInterval(-60)),
+            try cookie("accounts.google.com"),
+            try cookie("youtube.com.evil.test")
+        ], now: now))
+        XCTAssertTrue(YouTubeSignInPolicy.hasSession([try cookie(".youtube.com", expires: now.addingTimeInterval(60))], now: now))
+        XCTAssertTrue(YouTubeSignInPolicy.hasSession([try cookie("www.youtube.com")], now: now))
+    }
 }

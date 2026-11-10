@@ -63,3 +63,37 @@ public enum PlayerFailure {
         }
     }
 }
+
+/// 仅允许 YouTube 与 Google 的官方登入流程留在登入 WebView。
+public enum YouTubeSignInPolicy {
+    private static let youtubeHosts = ["youtube.com", "www.youtube.com", "m.youtube.com"]
+    private static let signInHosts = ["accounts.google.com", "accounts.youtube.com", "consent.google.com", "consent.youtube.com"]
+
+    public static let entryURL = URL(string: "https://www.youtube.com/signin")!
+
+    public static func allows(_ url: URL?, isMainFrame: Bool) -> Bool {
+        if !isMainFrame, url?.absoluteString == "about:blank" { return true }
+        guard let url, let host = trustedHost(url) else { return false }
+        return youtubeHosts.contains(host) || signInHosts.contains(host)
+            || (!isMainFrame && host == "www.google.com" && url.path.hasPrefix("/recaptcha/"))
+    }
+
+    public static func isYouTubeReturn(_ url: URL?) -> Bool {
+        guard let url, let host = trustedHost(url), youtubeHosts.contains(host) else { return false }
+        return url.path == "/" || url.path.isEmpty
+    }
+
+    public static func hasSession(_ cookies: [HTTPCookie], now: Date = .now) -> Bool {
+        cookies.contains { cookie in
+            let domain = cookie.domain.lowercased().trimmingPrefix(".")
+            return cookie.name == "LOGIN_INFO" && cookie.isSecure && youtubeHosts.contains(String(domain))
+                && (cookie.expiresDate.map { $0 > now } ?? true)
+        }
+    }
+
+    private static func trustedHost(_ url: URL) -> String? {
+        guard url.scheme == "https", url.user == nil, url.password == nil,
+              url.port == nil || url.port == 443 else { return nil }
+        return url.host?.lowercased()
+    }
+}

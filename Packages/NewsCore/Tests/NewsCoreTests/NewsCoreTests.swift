@@ -77,6 +77,15 @@ final class NewsCoreTests: XCTestCase {
         XCTAssertNil(request.value(forHTTPHeaderField: "Authorization"))
     }
 
+    func testDirectPlayerRequestUsesYouTubeAndBundleReferer() throws {
+        let config = try PlayerConfiguration(videoID: "abcdefghijk", bundleID: "COM.Example.News")
+        let request = config.embedRequest
+        XCTAssertEqual(request.url?.absoluteString, "https://www.youtube.com/embed/abcdefghijk?playsinline=1")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "Referer"), "https://com.example.news")
+        XCTAssertNil(request.value(forHTTPHeaderField: "Authorization"))
+        XCTAssertNil(request.value(forHTTPHeaderField: "Cookie"))
+    }
+
     func testVersionsCompareNumericallyWithoutFalsePatchUpdates() {
         XCTAssertTrue(AppVersion.isNewer("1.10.0", than: "1.9.9"))
         XCTAssertFalse(AppVersion.isNewer("1.0.0", than: "1.0"))

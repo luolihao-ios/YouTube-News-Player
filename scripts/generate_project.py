@@ -34,6 +34,7 @@ def generate_base():
         if path.suffix == ".swift": kind = "sourcecode.swift"
         elif path.suffix == ".xcassets": kind = "folder.assetcatalog"
         elif path.suffix == ".html": kind = "text.html"
+        elif path.suffix == ".js": kind = "sourcecode.javascript"
         elif path.suffix == ".json": kind = "text.json"
         elif path.suffix == ".xcprivacy": kind = "text.xml"
         else: continue

@@ -8,7 +8,7 @@ public final class PlaybackLog: @unchecked Sendable {
     private let lock = NSLock()
     private static let allowedFields: Set<String> = [
         "session", "videoID", "platform", "appVersion", "build", "code", "state",
-        "host", "path", "decision", "origin", "reason", "errorDomain", "errorCode", "referrerPresent"
+        "host", "path", "decision", "origin", "reason", "errorDomain", "errorCode", "referrerPresent", "sessionPresent"
     ]
     private enum LogError: Error { case invalidMaximumSize, unableToCreateFile }
 

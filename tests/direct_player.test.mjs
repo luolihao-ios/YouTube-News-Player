@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import test from 'node:test';
 import vm from 'node:vm';
 
-const sourceURL = new URL('../scripts/fixtures/PlaybackObservation.js', import.meta.url);
+const sourceURL = new URL('../NewsLiveApp/Resources/PlaybackObservation.js', import.meta.url);
 const fields = ['hasVideo', 'mediaErrorCode', 'playing', 'readyState', 'time', 'unavailable', 'verificationRequired'];
 
 // 只模拟标准 DOM 边界；执行真实资源，并记录所有越界读取与写入。

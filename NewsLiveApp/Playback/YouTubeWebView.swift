@@ -16,12 +16,15 @@ enum PlayerEvent {
 @MainActor
 final class PlayerSession: ObservableObject {
     weak var webView: WKWebView?
+    var usesWrapper = true
     let diagnosticID = UUID().uuidString
     private static weak var playingSession: PlayerSession?
     func pause() {
         guard let webView else { return }
         webView.pauseAllMediaPlayback(completionHandler: nil)
-        webView.evaluateJavaScript("window.NewsPlayer && window.NewsPlayer.pause()", completionHandler: nil)
+        if usesWrapper {
+            webView.evaluateJavaScript("window.NewsPlayer && window.NewsPlayer.pause()", completionHandler: nil)
+        }
         PlaybackDiagnostics.shared.record("pause_requested", fields: ["session": diagnosticID])
     }
     static func pauseCurrent() { playingSession?.pause() }
@@ -34,9 +37,10 @@ final class PlayerSession: ObservableObject {
 struct YouTubeWebView: NativePlayerRepresentable {
     let videoID: String
     let session: PlayerSession
+    var signedIn = false
     let onEvent: (PlayerEvent) -> Void
 
-    func makeCoordinator() -> Coordinator { Coordinator(session: session, videoID: videoID, onEvent: onEvent) }
+    func makeCoordinator() -> Coordinator { Coordinator(session: session, videoID: videoID, signedIn: signedIn, onEvent: onEvent) }
     #if os(macOS)
     func makeNSView(context: Context) -> WKWebView { makeWebView(context: context) }
     func updateNSView(_ nsView: WKWebView, context: Context) {}
@@ -58,7 +62,7 @@ struct YouTubeWebView: NativePlayerRepresentable {
         #endif
         configuration.websiteDataStore = PlayerWebData.store
         configuration.applicationNameForUserAgent = "YouTubeNewsLive/\(AppConfiguration.version)"
-        configuration.userContentController.add(context.coordinator, name: "youtube")
+        if !signedIn { configuration.userContentController.add(context.coordinator, name: "youtube") }
         let webView = WKWebView(frame: .zero, configuration: configuration)
         #if !os(macOS)
         webView.isOpaque = false
@@ -68,14 +72,22 @@ struct YouTubeWebView: NativePlayerRepresentable {
         webView.navigationDelegate = context.coordinator
         webView.uiDelegate = context.coordinator
         session.webView = webView
+        session.usesWrapper = !signedIn
         do {
             let config = try PlayerConfiguration(videoID: videoID, bundleID: AppConfiguration.bundleID)
-            guard let url = Bundle.main.url(forResource: "YouTubePlayer", withExtension: "html") else { throw YouTubeError.invalidPlayerConfiguration }
-            let template = try String(contentsOf: url, encoding: .utf8)
-            let html = template.replacingOccurrences(of: "__PLAYER_CONFIGURATION__", with: config.json)
-            // 使用实际 HTTPS 文档地址及明确 Referer；页面本身仍来自本地资源，不请求虚构域名。
-            webView.loadSimulatedRequest(config.pageRequest, responseHTML: html)
-            context.coordinator.record("page_load", fields: ["origin": config.origin.absoluteString, "reason": "persistent_webkit"])
+            if signedIn {
+                guard let url = Bundle.main.url(forResource: "PlaybackObservation", withExtension: "js") else { throw YouTubeError.invalidPlayerConfiguration }
+                context.coordinator.observationScript = try String(contentsOf: url, encoding: .utf8)
+                webView.load(config.embedRequest)
+                context.coordinator.record("direct_page_load", fields: ["origin": config.origin.absoluteString])
+            } else {
+                guard let url = Bundle.main.url(forResource: "YouTubePlayer", withExtension: "html") else { throw YouTubeError.invalidPlayerConfiguration }
+                let template = try String(contentsOf: url, encoding: .utf8)
+                let html = template.replacingOccurrences(of: "__PLAYER_CONFIGURATION__", with: config.json)
+                // 使用实际 HTTPS 文档地址及明确 Referer；页面本身仍来自本地资源，不请求虚构域名。
+                webView.loadSimulatedRequest(config.pageRequest, responseHTML: html)
+                context.coordinator.record("page_load", fields: ["origin": config.origin.absoluteString, "reason": "persistent_webkit"])
+            }
             context.coordinator.startTimeout()
         } catch {
             context.coordinator.record("configuration_failure")
@@ -85,10 +97,13 @@ struct YouTubeWebView: NativePlayerRepresentable {
     }
     private static func dismantle(_ uiView: WKWebView, coordinator: Coordinator) {
         coordinator.timeout?.cancel()
+        coordinator.observation?.cancel()
         coordinator.record("player_disposed")
         uiView.pauseAllMediaPlayback(completionHandler: nil)
-        uiView.evaluateJavaScript("window.NewsPlayer && window.NewsPlayer.destroy()", completionHandler: nil)
-        uiView.configuration.userContentController.removeScriptMessageHandler(forName: "youtube")
+        if !coordinator.signedIn {
+            uiView.evaluateJavaScript("window.NewsPlayer && window.NewsPlayer.destroy()", completionHandler: nil)
+            uiView.configuration.userContentController.removeScriptMessageHandler(forName: "youtube")
+        }
         uiView.stopLoading(); uiView.navigationDelegate = nil; uiView.uiDelegate = nil
         if coordinator.session?.webView === uiView { coordinator.session?.webView = nil }
     }
@@ -98,23 +113,26 @@ struct YouTubeWebView: NativePlayerRepresentable {
         let onEvent: (PlayerEvent) -> Void
         weak var session: PlayerSession?
         let videoID: String
+        let signedIn: Bool
         private let diagnosticID: String
         var timeout: Task<Void, Never>?
+        var observation: Task<Void, Never>?
+        var observationScript: String?
         private var failureReported = false
-        init(session: PlayerSession, videoID: String, onEvent: @escaping (PlayerEvent) -> Void) {
-            self.session = session; self.videoID = videoID; self.onEvent = onEvent; diagnosticID = session.diagnosticID
+        init(session: PlayerSession, videoID: String, signedIn: Bool, onEvent: @escaping (PlayerEvent) -> Void) {
+            self.session = session; self.videoID = videoID; self.signedIn = signedIn; self.onEvent = onEvent; diagnosticID = session.diagnosticID
         }
         func record(_ event: String, fields: [String: String] = [:]) {
             var context = fields; context["videoID"] = videoID; context["session"] = diagnosticID
             PlaybackDiagnostics.shared.record(event, fields: context)
         }
         private func fail(_ message: String) {
-            timeout?.cancel(); failureReported = true; onEvent(.failed(message))
+            timeout?.cancel(); observation?.cancel(); failureReported = true; onEvent(.failed(message))
         }
         func startTimeout() {
             timeout = Task { [weak self] in
                 do { try await Task.sleep(for: .seconds(25)) } catch { return }
-                self?.record("iframe_ready_timeout")
+                self?.record(self?.signedIn == true ? "direct_page_timeout" : "iframe_ready_timeout")
                 self?.fail("播放器連線逾時，請檢查網路後重試。可匯出播放診斷供開發者排查。")
             }
         }
@@ -161,16 +179,68 @@ struct YouTubeWebView: NativePlayerRepresentable {
             let url = webView.url
             let origin = url.flatMap { item in item.host.map { "\(item.scheme ?? "https")://\($0)" } } ?? "unknown"
             record("document_loaded", fields: ["origin": origin])
+            if signedIn, isOfficialEmbed(url) {
+                timeout?.cancel()
+                failureReported = false
+                onEvent(.ready)
+                observeDirectPlayback(in: webView)
+            }
+        }
+
+        private func isOfficialEmbed(_ url: URL?) -> Bool {
+            url?.scheme == "https" && url?.host == "www.youtube.com" && url?.port == nil
+                && url?.path == "/embed/\(videoID)"
+        }
+
+        private func observeDirectPlayback(in webView: WKWebView) {
+            guard let observationScript else { return }
+            observation?.cancel()
+            observation = Task { [weak self, weak webView] in
+                var previousTime: Double?
+                var isPlaying = false
+                while !Task.isCancelled {
+                    guard let webView, self?.isOfficialEmbed(webView.url) == true else { return }
+                    let value = try? await webView.evaluateJavaScript(observationScript, in: nil, contentWorld: .defaultClient)
+                    guard !Task.isCancelled, let self else { return }
+                    if let sample = value as? [String: Any] {
+                        if sample["verificationRequired"] as? Bool == true {
+                            self.record("direct_verification_required")
+                            self.fail("YouTube 要求重新登入。")
+                            return
+                        }
+                        if sample["unavailable"] as? Bool == true || sample["mediaErrorCode"] is Int {
+                            self.record("direct_media_unavailable", fields: ["code": (sample["mediaErrorCode"] as? Int).map { String($0) } ?? "none"])
+                            self.fail("YouTube 暫時無法播放這場直播。")
+                            return
+                        }
+                        let currentTime = sample["playing"] as? Bool == true ? sample["time"] as? Double : nil
+                        if !isPlaying, let previousTime, let currentTime, currentTime > previousTime + 0.5 {
+                            isPlaying = true
+                            self.record("direct_media_playing")
+                            self.session?.claimPlayback()
+                            self.onEvent(.state(1))
+                        } else if isPlaying, currentTime == nil {
+                            isPlaying = false
+                            self.onEvent(.state(2))
+                        }
+                        previousTime = currentTime
+                    }
+                    do { try await Task.sleep(for: .seconds(2)) } catch { return }
+                }
+            }
         }
         func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
             record("web_content_terminated")
             fail("播放器已中斷，請點擊重新載入。")
         }
         func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
-            let decision = PlayerNavigationPolicy.decision(for: action.request.url,
+            var decision = PlayerNavigationPolicy.decision(for: action.request.url,
                 isMainFrame: action.targetFrame?.isMainFrame == true,
                 isUserActivated: action.navigationType == .linkActivated,
                 opensNewWindow: action.targetFrame == nil)
+            if signedIn, action.targetFrame?.isMainFrame == true, decision == .allow, !isOfficialEmbed(action.request.url) {
+                decision = .cancel
+            }
             recordNavigation(action, decision: decision)
             switch decision {
             case .allow: decisionHandler(.allow)
@@ -192,7 +262,8 @@ struct YouTubeWebView: NativePlayerRepresentable {
         }
         private func recordNavigation(_ action: WKNavigationAction, decision: PlayerNavigationDecision) {
             let url = action.request.url
-            record("navigation_decision", fields: ["host": url?.host ?? "", "path": url?.path ?? "",
+            let path = signedIn && !isOfficialEmbed(url) ? "" : url?.path ?? ""
+            record("navigation_decision", fields: ["host": url?.host ?? "", "path": path,
                 "decision": String(describing: decision), "referrerPresent": action.request.value(forHTTPHeaderField: "Referer") == nil ? "false" : "true"])
         }
         private func openExternal(_ url: URL) {

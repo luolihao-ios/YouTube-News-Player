@@ -34,7 +34,7 @@ struct SettingsView: View {
                 Section("本機資料") {
                     Button("清除最近觀看") { store.clearHistory() }.disabled(store.library.recent.isEmpty)
                     Button("清除頻道快取") { store.clearCache() }
-                    Button(clearingPlayerData ? "正在清除…" : "清除 YouTube 播放資料") { clearPlayerData() }.disabled(clearingPlayerData)
+                    Button(clearingPlayerData ? "正在清除…" : "清除 YouTube 登入與播放資料") { clearPlayerData() }.disabled(clearingPlayerData)
                     ShareLink(item: PlaybackDiagnostics.shared.fileURL) { Label("匯出播放診斷", systemImage: "square.and.arrow.up") }
                     Button("清除播放診斷") { PlaybackDiagnostics.shared.clear() }
                     Text("播放診斷僅保存在本機，不含 Cookie、Token 或 API Key。可自行選擇是否分享。")
@@ -114,7 +114,7 @@ struct PrivacyView: View {
             }
             Section("YouTube / Google") {
                 Text("頻道、縮略圖和直播資料透過 YouTube Data API 與 Google 圖片服務載入。這些網路連線會向服務提供者傳送 IP 位址與必要請求資訊。")
-                Text("確認載入播放器後，App 會連線至 YouTube 官方 IFrame Player。YouTube / Google 可能處理 IP 位址、裝置、Cookie 及播放互動等資訊，依其服務條款與隱私政策運作。同意後在本 App 保存 YouTube 播放 Cookie 與網站資料，可在設定清除；不與 Safari 共用登入。")
+                Text("登入與播放由 YouTube 和 Google 官方頁面提供。App 會在此裝置保存登入與播放所需的網站資料，可於設定清除。YouTube / Google 依其服務條款與隱私政策處理 IP 位址、裝置、Cookie 及播放互動等資訊。")
                 Text("Safari 的 YouTube 登入與驗證資料不會匯入本 App；清除 App 的播放資料也不會登出 Safari。")
                 Text("播放診斷日誌僅保存在本機，不含 Cookie、Token 或 API Key。只有自行使用「匯出播放診斷」分享時，檔案才會傳給您選擇的接收者。")
                 Text("App 不提取媒體地址、不下載影音、不跳過或遮蔽廣告。播放可用性、廣告及地區限制由 YouTube 和內容提供者控制。")
